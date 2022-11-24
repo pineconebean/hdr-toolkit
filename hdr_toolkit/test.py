@@ -16,7 +16,7 @@ from hdr_toolkit.networks import get_model
 def test(model_type, checkpoint_path, dataset, input_dir, out_dir, device, write_tonemap_gt, with_gt, act):
     out_dir = pathlib.Path(out_dir)
     model = get_model(model_type, out_activation=act)
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
     model.load_state_dict(checkpoint['model'])
     model.eval()
     model.to(device)

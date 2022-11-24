@@ -38,13 +38,16 @@ def _save_model(model, optimizer, epoch, save_path):
 
 
 def train(model, epochs, batch_size, data_path, dataset, checkpoint_path, log_path, logger_name,
-          learning_rate=1e-4, loss_type='mse', two_level_dir=False):
+          learning_rate=1e-4, loss_type='mse', two_level_dir=False, use_cpu=False):
     logger = get_logger(logger_name, log_path)
     logger.info(f'{"=" * 20}Start Training{"=" * 20}\n')
     data = _get_data_set(dataset, data_path, batch_size=batch_size, two_level_dir=two_level_dir)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     trained_epochs = 0
-    device = torch.device("cuda:0")
+    if use_cpu:
+        device = torch.device('cpu')
+    else:
+        device = torch.device("cuda:0")
     model.to(device)
     torch.autograd.set_detect_anomaly(True)
 
@@ -124,6 +127,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--batch-size', dest='batch_size', type=int, default=4)
     parser.add_argument('--two-level-dir', dest='two_l_dir', action='store_true')
+    parser.add_argument('--cpu', dest='cpu', action='store_true')
     args = parser.parse_args()
 
     train(model=get_model(args.model, out_activation=args.activation),
@@ -135,4 +139,5 @@ if __name__ == '__main__':
           log_path=rf'../models/{args.save_dir}/train.log',
           dataset=args.dataset,
           loss_type=args.loss,
-          two_level_dir=args.two_l_dir)
+          two_level_dir=args.two_l_dir,
+          use_cpu=args.cpu)
