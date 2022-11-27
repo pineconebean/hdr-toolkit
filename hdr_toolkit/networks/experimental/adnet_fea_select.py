@@ -57,7 +57,7 @@ class ECADNet(nn.Module):
         b, c, h, w = x.shape
         x = x.view(b, self.trans_conv_groups, c // self.trans_conv_groups, h, w)
         x = torch.transpose(x, 1, 2)
-        x = x.view(b, -1, h, w)
+        x = x.reshape(b, -1, h, w)
         return x
 
     def forward(self, short, mid, long):
