@@ -47,7 +47,11 @@ class ECADNet(nn.Module):
         self.att_long_mid = SpatialAttention(n_channels)
 
         # ECA layer for select features
-        self.trans_conv = nn.Conv2d(n_channels * 6, n_channels * 6, 3, padding='same', groups=trans_conv_groups)
+        self.trans_conv = nn.Sequential(
+            nn.Conv2d(n_channels * 6, n_channels * 6, 3, padding='same', groups=trans_conv_groups)
+        )
+        if trans_conv_groups > 1:
+            self.trans_conv.append(nn.ChannelShuffle(trans_conv_groups))
         self.eca = ECALayer(k_size=5)  # k_size = |log2(64 * 6) / 2 + 0.5|_odd = 5
 
         self.merging = AHDRMergingNet(n_channels * 6, n_channels, out_activation)
@@ -78,8 +82,5 @@ class ECADNet(nn.Module):
 
         # Channel attention with ECA
         x = self.trans_conv(cat((aligned_s, feat_mid, aligned_l, att_refined_s, att_feat_m, att_refined_l), dim=1))
-        if self.trans_conv_groups > 1:
-            x = torch.channel_shuffle(x, self.trans_conv_groups)
         x = self.eca(x)
         return self.merging(x, att_feat_m)
-
