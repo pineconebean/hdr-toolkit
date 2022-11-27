@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# reference: https://github.com/qingsenyangit/AHDRNet/blob/master/model.py
 class DRDB(nn.Module):
 
     def __init__(self, n_channels, growth_rate, n_dense_layers):
@@ -39,4 +40,3 @@ class DeformRDB(nn.Module):
 
     def forward(self, x):
         pass
-    

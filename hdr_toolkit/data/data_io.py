@@ -4,15 +4,17 @@ import torch
 import torchvision.transforms.functional as F
 
 
-def read_ldr(path, exposure, bit):
-    img = F.to_tensor(cv2.cvtColor(cv2.imread(path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
-                      .astype(np.float32) / (2 ** bit - 1))
-    img_corrected = _gamma_correction(img, 2.2, exposure)
-    return torch.cat((img, img_corrected), dim=0)
+def read_ldr(path, bit):
+    return F.to_tensor(cv2.cvtColor(cv2.imread(path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
+                       .astype(np.float32) / (2 ** bit - 1))
 
 
-def _gamma_correction(img, gamma, exposure):
+def gamma_correction(img, exposure, gamma):
     return (img ** gamma) * 2.0 ** (-1 * exposure)
+
+
+def ev_align(img, exposure, gamma):
+    return ((img ** gamma) * 2.0 ** (-1 * exposure)) ** (1 / gamma)
 
 
 def read_tiff(path, exposure, cat=True, is_uint8=True):
@@ -22,7 +24,7 @@ def read_tiff(path, exposure, cat=True, is_uint8=True):
     else:
         # cv2.imread without IMREAD_UNCHANGED will convert data to uint8 automatically
         img = F.to_tensor(cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB))
-    img_corrected = _gamma_correction(img, 2.2, exposure)
+    img_corrected = gamma_correction(img, exposure, 2.2)
     if cat:
         return torch.cat((img, img_corrected), dim=0)
     else:

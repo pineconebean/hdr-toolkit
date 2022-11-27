@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from data import get_dataset
-from data.im_write import KalantariWriter, NTIREWriter
+from data.writers import KalantariWriter, NTIREWriter
 from hdr_toolkit.hdr_ops.tonemap import tonemap
 from hdr_toolkit.metrics.psnr import psnr
 from hdr_toolkit.networks import get_model

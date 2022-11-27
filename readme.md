@@ -91,3 +91,12 @@
     ```
 
 对训练集进行裁剪后，即可使用`train.py`进行在kalantari数据集上的训练，对测试集进行重新组织后，即可使用`test.py`来输出测试结果。
+
+## 环境
+
+- python >= 3.7
+- pytorch >= 1.9
+- torchvision >= 0.12.0
+- opencv-python=4.5.5
+- numpy>=1.22.3
+- imageio>=2.22.0

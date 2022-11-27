@@ -1,12 +1,15 @@
 from hdr_toolkit.networks.adnet import ADNet
 from hdr_toolkit.networks.ahdrnet import AHDRNet
+from hdr_toolkit.networks.experimental.adnet_fea_select import ECADNet
 
 
 def get_model(model_type, out_activation='relu'):
     if model_type == 'ahdr':
-        model = AHDRNet(out_activation=out_activation)
+        model = AHDRNet(n_channels=64, out_activation=out_activation)
     elif model_type == 'adnet':
-        model = ADNet(6, 3, 64, 32, out_act=out_activation)
+        model = ADNet(n_channels=64, n_dense_layers=3, growth_rate=32, out_activation=out_activation)
+    elif model_type == 'ecadnet_gc6':
+        model = ECADNet(n_channels=64, trans_conv_groups=6, out_activation=out_activation)
     else:
         raise ValueError('invalid model type')
     return model

@@ -8,7 +8,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as F
 from torch.utils.data import Dataset
 
-import hdr_toolkit.data.data_io as io
+from hdr_toolkit.data.data_io import gamma_correction, imread_uint16_png
 
 BICUBIC = transforms.InterpolationMode.BICUBIC
 
@@ -54,20 +54,16 @@ class NTIREDataset(Dataset):
         if self.with_gt:
             align_ratio_path = os.path.join(img_dir, '{}_alignratio.npy'.format(img_id))
             path_gt = path_img_with_suffix.replace(f'_{self.suffix}', '_gt.png')
-            result['gt'] = F.to_tensor(io.imread_uint16_png(path_gt, align_ratio_path))
+            result['gt'] = F.to_tensor(imread_uint16_png(path_gt, align_ratio_path))
             # gt is non-linearized
 
         return result
 
 
-def _gamma_correction(img, gamma, exposure):
-    return (img ** gamma) * 2.0 ** (-1 * exposure)
-
-
 def read_ntire_ldr(path, exposure, device='cuda:0'):
     img = (cv2.cvtColor(cv2.imread(path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB) / 255.0).astype(np.float32)
     img = F.to_tensor(img).to(device)
-    img_corrected = _gamma_correction(img, 2.24, exposure)
+    img_corrected = gamma_correction(img, exposure, 2.24)
     return torch.cat((img, img_corrected), dim=0)
 
 

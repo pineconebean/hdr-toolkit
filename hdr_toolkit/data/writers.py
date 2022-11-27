@@ -5,7 +5,7 @@ from abc import ABC
 import cv2
 import numpy as np
 
-import hdr_toolkit.data.data_io as io
+from hdr_toolkit.data.data_io import imwrite_uint16_png
 
 
 class Writer(ABC):
@@ -37,7 +37,7 @@ class NTIREWriter(Writer):
         image_path = str(self.out_dir.joinpath('{:04d}.png'.format(image_id)))
         alignratio_path = str(self.out_dir.joinpath('{:04d}_alignratio.npy'.format(image_id)))
 
-        io.imwrite_uint16_png(image_path, image, alignratio_path)
+        imwrite_uint16_png(image_path, image, alignratio_path)
 
     def write_tonemap(self, image, image_id):
         self._write_tonemap(image, str(self.tone_map_dir.joinpath(f'{image_id:04d}.png')))
