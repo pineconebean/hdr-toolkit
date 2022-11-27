@@ -1,3 +1,4 @@
+import torch
 from torch import cat
 from torch import nn
 
@@ -33,6 +34,7 @@ class ECADNet(nn.Module):
 
     def __init__(self, n_channels, trans_conv_groups=6, out_activation='relu'):
         super(ECADNet, self).__init__()
+        self.trans_conv_groups = trans_conv_groups
         # PCD alignment module
         self.pyramid_feats = PyramidFeature(in_channels=3, n_channels=n_channels)
         self.align_module = PCDAlign(n_channels)
@@ -76,6 +78,8 @@ class ECADNet(nn.Module):
 
         # Channel attention with ECA
         x = self.trans_conv(cat((aligned_s, feat_mid, aligned_l, att_refined_s, att_feat_m, att_refined_l), dim=1))
+        if self.trans_conv_groups > 1:
+            x = torch.channel_shuffle(x, self.trans_conv_groups)
         x = self.eca(x)
         return self.merging(x, att_feat_m)
 
