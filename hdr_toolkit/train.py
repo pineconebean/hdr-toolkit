@@ -76,7 +76,7 @@ def train(model, epochs, batch_size, data_path, dataset, checkpoint_path, log_pa
 
                 hdr_pred = model(low, ref, high)
 
-                loss = loss_func(tonemap(hdr_pred), tonemap(gt))
+                loss = loss_func(tonemap(hdr_pred, dataset=dataset), tonemap(gt, dataset=dataset))
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -116,7 +116,7 @@ def train(model, epochs, batch_size, data_path, dataset, checkpoint_path, log_pa
 
 
 if __name__ == '__main__':
-    model_choices = ('ahdrnet', 'adnet')
+    model_choices = ('ahdrnet', 'adnet', 'ecadnet-gc6')
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model', choices=model_choices, required=True)
     parser.add_argument('--save-dir', dest='save_dir', required=True)
