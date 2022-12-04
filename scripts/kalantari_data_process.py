@@ -48,6 +48,52 @@ def crop_training_files(src, dst):
         print(f'Progress: {len(hdr_patches) * len(hdr_patches[0]) * (e_cnt + 1)} / {61568}')
 
 
+def prepare_validation_data(src, dst, size):
+    r"""Randomly copy or link data from source directory as validation dataset (only for Kalantari dataset)"""
+    target_dir = Path(dst)
+    src_dir = Path(src)
+    target_dir.mkdir(exist_ok=True)
+
+    examples = _collect_file_names(src_dir)
+    print(examples)
+    chosen_examples = np.random.choice(examples, size, replace=False).tolist()
+    for e in chosen_examples:
+        # copy exposure files
+        exposure_path = src_dir.joinpath(f'{e}_exposure.txt')
+        shutil.copyfile(exposure_path, target_dir.joinpath(exposure_path.name))
+
+        # read and crop images to small size (so that not occupy too much space)
+        ldr_path = [src_dir.joinpath(f'{e}_short.tif'),
+                    src_dir.joinpath(f'{e}_medium.tif'),
+                    src_dir.joinpath(f'{e}_long.tif')]
+        hdr_path = src_dir.joinpath(f'{e}_gt.hdr')
+        ldr_data, hdr_data = _read_example_data(ldr_path, hdr_path)
+
+        def _crop_val_image(image):
+            return _crop_an_image(image, crop_size=250, step=250, threshold=0)
+
+        hdr_patches = _crop_val_image(hdr_data)
+        ldr_patches = []
+        for ldr_i in ldr_data:
+            ldr_patches.append(_crop_val_image(ldr_i))
+
+        for i in range(len(hdr_patches)):
+            cv2.imwrite(str(target_dir.joinpath(f'{e}_{i:02d}_gt.hdr')), hdr_patches[i])
+            cv2.imwrite(str(target_dir.joinpath(f'{e}_{i:02d}_short.tif')), ldr_patches[0][i])
+            cv2.imwrite(str(target_dir.joinpath(f'{e}_{i:02d}_medium.tif')), ldr_patches[1][i])
+            cv2.imwrite(str(target_dir.joinpath(f'{e}_{i:02d}_long.tif')), ldr_patches[2][i])
+
+
+def _collect_file_names(src_dir: Path, suffix='_gt.hdr') -> list:
+    all_files = src_dir.glob(f'*{suffix}')
+    result = []
+
+    for file in all_files:
+        result.append(file.name[:-len(suffix)])
+
+    return result
+
+
 def _augment_and_crop(ldr, hdr):
     # augment
     aug_ldr_s = _augment(ldr[0])
@@ -58,12 +104,12 @@ def _augment_and_crop(ldr, hdr):
     ldr_patches = []
     hdr_patches = []
     for i in range(len(aug_hdr)):
-        hdr_patches.append(_crop(aug_hdr[i]))
-        ldr_patches.append([_crop(aug_ldr_s[i]), _crop(aug_ldr_m[i]), _crop(aug_ldr_l[i])])
+        hdr_patches.append(_crop_an_image(aug_hdr[i]))
+        ldr_patches.append([_crop_an_image(aug_ldr_s[i]), _crop_an_image(aug_ldr_m[i]), _crop_an_image(aug_ldr_l[i])])
     return ldr_patches, hdr_patches
 
 
-def _crop(image, crop_size=256, step=105, threshold=40):
+def _crop_an_image(image, crop_size=256, step=105, threshold=40):
     h, w, _ = image.shape
     h_space = np.arange(0, h - crop_size + 1, step)
     w_space = np.arange(0, w - crop_size + 1, step)
@@ -119,9 +165,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--read', dest='read_dir', required=True)
     parser.add_argument('--write', dest='write_dir', required=True)
-    parser.add_argument('--op', dest='op', required=True, choices=['reorganize', 'crop'])
+    parser.add_argument('--op', dest='op', required=True, choices=['reorganize', 'crop', 'prepare_val'])
+    parser.add_argument('--val-size', dest='val_size', default=6, type=int)
     args = parser.parse_args()
     if args.op == 'crop':
         crop_training_files(args.read_dir, args.write_dir)
+    elif args.op == 'prepare_val':
+        prepare_validation_data(args.read_dir, args.write_dir, args.val_size)
     else:
         reorganize_test_files(args.read_dir, args.write_dir)

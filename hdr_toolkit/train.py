@@ -43,7 +43,7 @@ def _save_model(model, optimizer, epoch, save_path, val_scores=None):
 def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir, log_path, logger_name,
           learning_rate=1e-4, loss_type='mse', two_level_dir=False, use_cpu=False):
     data = _get_data_set(dataset, data_path, batch_size=batch_size, two_level_dir=two_level_dir)
-    val_data = _get_data_set(dataset, val_data_path, batch_size=1)
+    val_data = _get_data_set(dataset, val_data_path, batch_size=batch_size)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     trained_epochs = 0
     best_val_scores = (0., 0.)  # psnr-l, psnr-t
