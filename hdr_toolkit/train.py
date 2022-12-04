@@ -129,21 +129,18 @@ def _kal_validation(model, optimizer, val_data, epoch, best_val_scores, device, 
             psnr_t = (i * psnr_t + psnr(mu_pred, mu_gt)) / (i + 1)
 
     save_dir_path = pathlib.Path(save_dir)
-    val_logger.info(f'Epoch: {epoch}')
+    val_logger.info(f'{"=" * 20}Validation for Epoch {epoch}{"=" * 20}\n')
 
     best_psnr_l, best_psnr_t = best_val_scores
     if psnr_l > best_psnr_l:
         best_psnr_l = psnr_l
         _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-l-checkpoint.pth')))
-        val_logger.info(f'Update model with best psnr-l scores')
     if psnr_t > best_psnr_t:
         best_psnr_t = psnr_t
         _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-t-checkpoint.pth')))
-        val_logger.info(f'Update model with best psnr-t scores')
 
-    val_logger.info(f'psnr-l: {psnr_l} | psnr-t: {psnr_t}')
-    val_logger.info(f'best psnr-l: {best_psnr_l} | best psnr-t: {best_psnr_t}')
-
+    val_logger.info(f'psnr-l: {psnr_l} ({best_psnr_l}) | psnr-t: {psnr_t} ({best_psnr_t})')
+    val_logger.info('')
     model.train()
 
     return best_psnr_l, best_psnr_t
