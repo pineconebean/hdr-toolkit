@@ -55,7 +55,8 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
     torch.autograd.set_detect_anomaly(True)
 
     # load checkpoint
-    checkpoint_path = pathlib.Path(save_dir).joinpath('checkpoint.pth')
+    save_dir_path = pathlib.Path(save_dir)
+    checkpoint_path = save_dir_path.joinpath('checkpoint.pth')
     if checkpoint_path.exists():
         checkpoint = torch.load(str(checkpoint_path))
         model.load_state_dict(checkpoint['model'])
@@ -66,6 +67,7 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
             best_val_scores = checkpoint['val_scores']
 
     logger = get_logger(logger_name, log_path)
+    val_logger = get_logger('validation', str(save_dir_path.joinpath('validation.log')))
     logger.info(f'{"=" * 20}Start Training{"=" * 20}\n')
     model.train()
     if dataset == 'kalantari':
@@ -85,7 +87,8 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
 
                 logger.info(f'Epoch: {total_epochs} |Batch: {batch} --- Loss: {loss:.8f},'
                             f' PSNR-L: {psnr(hdr_pred, gt):.4f} | PSNR-T: {psnr(tonemap(hdr_pred), tonemap(gt)):.4f}')
-                best_val_scores = _kal_validation(model, optimizer, val_data, total_epochs, best_val_scores, device, save_dir)
+                best_val_scores = _kal_validation(model, optimizer, val_data, total_epochs,
+                                                  best_val_scores, device, save_dir, val_logger)
             _save_model(model, optimizer, total_epochs, str(checkpoint_path), val_scores=best_val_scores)
 
     elif dataset == 'ntire':
@@ -112,7 +115,7 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
     logger.info(f'{"=" * 20}End Training{"=" * 20}\n')
 
 
-def _kal_validation(model, optimizer, val_data, epoch, best_val_scores, device, save_dir):
+def _kal_validation(model, optimizer, val_data, epoch, best_val_scores, device, save_dir, val_logger):
     model.eval()
     psnr_l, psnr_t = 0., 0.
     with torch.no_grad():
@@ -126,7 +129,6 @@ def _kal_validation(model, optimizer, val_data, epoch, best_val_scores, device, 
             psnr_t = (i * psnr_t + psnr(mu_pred, mu_gt)) / (i + 1)
 
     save_dir_path = pathlib.Path(save_dir)
-    val_logger = get_logger('validation', str(save_dir_path.joinpath('validation.log')))
     val_logger.info(f'Epoch: {epoch}')
 
     best_psnr_l, best_psnr_t = best_val_scores
