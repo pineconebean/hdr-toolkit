@@ -22,7 +22,7 @@ def _get_data_set(name, path, batch_size=4, two_level_dir=False):
         raise ValueError('Unexpected dataset')
 
 
-def _save_model(model, optimizer, epoch, save_path):
+def _save_model(model, optimizer, epoch, save_path, val_scores=None):
     if isinstance(model, torch.nn.DataParallel):
         model_state_dict = model.module.state_dict()
     else:
@@ -34,16 +34,19 @@ def _save_model(model, optimizer, epoch, save_path):
         'epoch': epoch
     }
 
+    if val_scores is not None:
+        things_to_save['val_scores'] = val_scores
+
     torch.save(things_to_save, save_path)
 
 
-def train(model, epochs, batch_size, data_path, dataset, checkpoint_path, log_path, logger_name,
+def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir, log_path, logger_name,
           learning_rate=1e-4, loss_type='mse', two_level_dir=False, use_cpu=False):
-    logger = get_logger(logger_name, log_path)
-    logger.info(f'{"=" * 20}Start Training{"=" * 20}\n')
     data = _get_data_set(dataset, data_path, batch_size=batch_size, two_level_dir=two_level_dir)
+    val_data = _get_data_set(dataset, val_data_path, batch_size=1)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     trained_epochs = 0
+    best_val_scores = (0., 0.)  # psnr-l, psnr-t
     if use_cpu:
         device = torch.device('cpu')
     else:
@@ -52,28 +55,26 @@ def train(model, epochs, batch_size, data_path, dataset, checkpoint_path, log_pa
     torch.autograd.set_detect_anomaly(True)
 
     # load checkpoint
-    saved_weights = pathlib.Path(checkpoint_path)
-    if saved_weights.exists():
-        checkpoint = torch.load(checkpoint_path)
+    checkpoint_path = pathlib.Path(save_dir).joinpath('checkpoint.pth')
+    if checkpoint_path.exists():
+        checkpoint = torch.load(str(checkpoint_path))
         model.load_state_dict(checkpoint['model'])
         model.to(device)
         optimizer.load_state_dict(checkpoint['optimizer'])
         trained_epochs = checkpoint['epoch']
-        model.train()
+        if 'val_scores' in checkpoint:
+            best_val_scores = checkpoint['val_scores']
 
+    logger = get_logger(logger_name, log_path)
+    logger.info(f'{"=" * 20}Start Training{"=" * 20}\n')
+    model.train()
     if dataset == 'kalantari':
         loss_func = torch.nn.L1Loss()
         for epoch in range(epochs):
             total_epochs = trained_epochs + epoch + 1
             logger.info(f'{"=" * 10} Epoch: {total_epochs} {"=" * 10}')
             for batch, d in enumerate(data):
-                ldr_images = d['ldr_images']
-                gt = d['gt']
-                low = ldr_images[0].to(device)
-                ref = ldr_images[1].to(device)
-                high = ldr_images[2].to(device)
-                gt = gt.to(device)
-
+                low, ref, high, gt = _data_to_device(d, device)
                 hdr_pred = model(low, ref, high)
 
                 loss = loss_func(tonemap(hdr_pred, dataset=dataset), tonemap(gt, dataset=dataset))
@@ -84,7 +85,8 @@ def train(model, epochs, batch_size, data_path, dataset, checkpoint_path, log_pa
 
                 logger.info(f'Epoch: {total_epochs} |Batch: {batch} --- Loss: {loss:.8f},'
                             f' PSNR-L: {psnr(hdr_pred, gt):.4f} | PSNR-T: {psnr(tonemap(hdr_pred), tonemap(gt)):.4f}')
-            _save_model(model, optimizer, total_epochs, checkpoint_path)
+                best_val_scores = _kal_validation(model, optimizer, val_data, total_epochs, best_val_scores, save_dir)
+            _save_model(model, optimizer, total_epochs, str(checkpoint_path), val_scores=best_val_scores)
 
     elif dataset == 'ntire':
         loss_func = NtireMuLoss(loss_func=loss_type)
@@ -92,12 +94,7 @@ def train(model, epochs, batch_size, data_path, dataset, checkpoint_path, log_pa
             total_epochs = trained_epochs + epoch + 1
             logger.info(f'{"=" * 10} Epoch: {total_epochs} {"=" * 10}')
             for batch, d in enumerate(data):
-                ldr_images = d['ldr_images']
-                gt = d['gt']
-                low = ldr_images[0].to(device)
-                ref = ldr_images[1].to(device)
-                high = ldr_images[2].to(device)
-                gt = gt.to(device)
+                low, ref, high, gt = _data_to_device(d, device)
 
                 hdr_pred = model(low, ref, high)
                 loss = loss_func(hdr_pred, gt)
@@ -110,9 +107,55 @@ def train(model, epochs, batch_size, data_path, dataset, checkpoint_path, log_pa
                 logger.info(f'Epoch: {total_epochs} |Batch: {batch} --- Loss: {loss:.8f},'
                             f' PSNR-L: {score_psnr:.4f}')
 
-            _save_model(model, optimizer, total_epochs, checkpoint_path)
+            _save_model(model, optimizer, total_epochs, save_dir)
 
     logger.info(f'{"=" * 20}End Training{"=" * 20}\n')
+
+
+def _kal_validation(model, optimizer, val_data, epoch, best_val_scores, device, save_dir):
+    model.eval()
+    psnr_l, psnr_t = 0., 0.
+    with torch.no_grad():
+        for i, data in enumerate(val_data):
+            low, ref, high, gt = _data_to_device(data, device)
+            pred = model(low, ref, high)
+
+            pred, gt = pred.squeeze(), gt.squeeze()
+            mu_pred, mu_gt = tonemap(pred), tonemap(gt)
+
+            psnr_l = (i * psnr_l + psnr(pred, gt)) / (i + 1)
+            psnr_t = (i * psnr_t + psnr(mu_pred, mu_gt)) / (i + 1)
+
+    save_dir_path = pathlib.Path(save_dir)
+    val_logger = get_logger('validation', str(save_dir_path.joinpath('validation.log')))
+    val_logger.info(f'Epoch: {epoch}')
+
+    best_psnr_l, best_psnr_t = best_val_scores
+    if psnr_l > best_psnr_l:
+        best_psnr_l = psnr_l
+        _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-l-checkpoint.pth')))
+        val_logger.info(f'Update model with best psnr-l scores')
+    if psnr_t > best_psnr_t:
+        best_psnr_t = psnr_t
+        _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-t-checkpoint.pth')))
+        val_logger.info(f'Update model with best psnr-t scores')
+
+    val_logger.info(f'psnr-l: {psnr_l} | psnr-t: {psnr_t}')
+    val_logger.info(f'best psnr-l: {best_psnr_l} | best psnr-t: {best_psnr_t}')
+
+    model.train()
+
+    return best_psnr_l, best_psnr_t
+
+
+def _data_to_device(data, device):
+    ldr_images = data['ldr_images']
+    low = ldr_images[0].to(device)
+    ref = ldr_images[1].to(device)
+    high = ldr_images[2].to(device)
+    gt = data['gt'].to(device)
+
+    return low, ref, high, gt
 
 
 if __name__ == '__main__':
@@ -123,6 +166,7 @@ if __name__ == '__main__':
     parser.add_argument('--activation', choices=['relu', 'sigmoid'], default='relu')
     parser.add_argument('--loss', choices=['l1', 'mse'], default='mse')
     parser.add_argument('--data-path', dest='data_path', required=True)
+    parser.add_argument('--val-data-path', dest='val_data_path', required=True)
     parser.add_argument('--dataset', choices=['ntire', 'kalantari'], default='ntire')
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--batch-size', dest='batch_size', type=int, default=4)
@@ -134,7 +178,8 @@ if __name__ == '__main__':
           epochs=args.epochs,
           batch_size=args.batch_size,
           data_path=args.data_path,
-          checkpoint_path=rf'../models/{args.save_dir}/checkpoint.pth',
+          val_data_path=args.val_data_path,
+          save_dir=rf'../models/{args.save_dir}',
           logger_name=args.model,
           log_path=rf'../models/{args.save_dir}/train.log',
           dataset=args.dataset,
