@@ -85,7 +85,7 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
 
                 logger.info(f'Epoch: {total_epochs} |Batch: {batch} --- Loss: {loss:.8f},'
                             f' PSNR-L: {psnr(hdr_pred, gt):.4f} | PSNR-T: {psnr(tonemap(hdr_pred), tonemap(gt)):.4f}')
-                best_val_scores = _kal_validation(model, optimizer, val_data, total_epochs, best_val_scores, save_dir)
+                best_val_scores = _kal_validation(model, optimizer, val_data, total_epochs, best_val_scores, device, save_dir)
             _save_model(model, optimizer, total_epochs, str(checkpoint_path), val_scores=best_val_scores)
 
     elif dataset == 'ntire':
