@@ -41,7 +41,7 @@ def _save_model(model, optimizer, epoch, save_path, val_scores=None):
 
 
 def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir, log_path, logger_name,
-          learning_rate=1e-4, loss_type='mse', two_level_dir=False, use_cpu=False):
+          learning_rate=1e-4, loss_type='mse', two_level_dir=False, use_cpu=False, val_interval=1000):
     data = _get_data_set(dataset, data_path, batch_size=batch_size, two_level_dir=two_level_dir)
     val_data = _get_data_set(dataset, val_data_path, batch_size=batch_size)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -71,6 +71,7 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
     logger.info(f'{"=" * 20}Start Training{"=" * 20}\n')
     model.train()
     if dataset == 'kalantari':
+        total_batches = 0  # used for validation
         loss_func = torch.nn.L1Loss()
         for epoch in range(epochs):
             total_epochs = trained_epochs + epoch + 1
@@ -87,8 +88,15 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
 
                 logger.info(f'Epoch: {total_epochs} |Batch: {batch} --- Loss: {loss:.8f},'
                             f' PSNR-L: {psnr(hdr_pred, gt):.4f} | PSNR-T: {psnr(tonemap(hdr_pred), tonemap(gt)):.4f}')
-                best_val_scores = _kal_validation(model, optimizer, val_data, total_epochs,
-                                                  best_val_scores, device, save_dir, val_logger)
+
+                # perform validation
+                total_batches += 1
+                if total_batches % val_interval == 0:
+                    best_val_scores = _kal_validation(model, optimizer, val_data, total_epochs, batch,
+                                                      best_val_scores, device, save_dir, val_logger)
+
+            best_val_scores = _kal_validation(model, optimizer, val_data, total_epochs, 'Epoch end',
+                                              best_val_scores, device, save_dir, val_logger)
             _save_model(model, optimizer, total_epochs, str(checkpoint_path), val_scores=best_val_scores)
 
     elif dataset == 'ntire':
@@ -115,7 +123,7 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
     logger.info(f'{"=" * 20}End Training{"=" * 20}\n')
 
 
-def _kal_validation(model, optimizer, val_data, epoch, best_val_scores, device, save_dir, val_logger):
+def _kal_validation(model, optimizer, val_data, epoch, batch, best_val_scores, device, save_dir, val_logger):
     model.eval()
     psnr_l, psnr_t = 0., 0.
     with torch.no_grad():
@@ -129,18 +137,21 @@ def _kal_validation(model, optimizer, val_data, epoch, best_val_scores, device, 
             psnr_t = (i * psnr_t + psnr(mu_pred, mu_gt)) / (i + 1)
 
     save_dir_path = pathlib.Path(save_dir)
-    val_logger.info(f'{"=" * 20}Validation for Epoch {epoch}{"=" * 20}\n')
+    val_logger.info(f'{"=" * 20}Validation for Epoch {epoch} Batch {batch}{"=" * 20}')
 
     best_psnr_l, best_psnr_t = best_val_scores
+    update_l, update_t = False, False
     if psnr_l > best_psnr_l:
         best_psnr_l = psnr_l
         _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-l-checkpoint.pth')))
+        update_l = True
     if psnr_t > best_psnr_t:
         best_psnr_t = psnr_t
         _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-t-checkpoint.pth')))
+        update_t = True
 
-    val_logger.info(f'psnr-l: {psnr_l} ({best_psnr_l}) | psnr-t: {psnr_t} ({best_psnr_t})')
-    val_logger.info('')
+    val_logger.info(f'psnr-l: {psnr_l:04d} ({best_psnr_l:04d}{" up" if update_l else ""}) | '
+                    f'psnr-t: {psnr_t:04d} ({best_psnr_t:04d}{" up" if update_t else ""})\n')
     model.train()
 
     return best_psnr_l, best_psnr_t
@@ -165,6 +176,7 @@ if __name__ == '__main__':
     parser.add_argument('--loss', choices=['l1', 'mse'], default='mse')
     parser.add_argument('--data-path', dest='data_path', required=True)
     parser.add_argument('--val-data-path', dest='val_data_path', required=True)
+    parser.add_argument('--val-interval', dest='val_interval', required=True, default=1000, type=int)
     parser.add_argument('--dataset', choices=['ntire', 'kalantari'], default='ntire')
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--batch-size', dest='batch_size', type=int, default=4)
@@ -183,4 +195,5 @@ if __name__ == '__main__':
           dataset=args.dataset,
           loss_type=args.loss,
           two_level_dir=args.two_l_dir,
-          use_cpu=args.cpu)
+          use_cpu=args.cpu,
+          val_interval=args.val_interval)
