@@ -150,8 +150,8 @@ def _kal_validation(model, optimizer, val_data, epoch, batch, best_val_scores, d
         _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-t-checkpoint.pth')))
         update_t = True
 
-    val_logger.info(f'psnr-l: {psnr_l:04d} ({best_psnr_l:04d}{" up" if update_l else ""}) | '
-                    f'psnr-t: {psnr_t:04d} ({best_psnr_t:04d}{" up" if update_t else ""})\n')
+    val_logger.info(f'psnr-l: {psnr_l:.5f} ({best_psnr_l:.5f}{" up" if update_l else ""}) | '
+                    f'psnr-t: {psnr_t:.5f} ({best_psnr_t:.5f}{" up" if update_t else ""})\n')
     model.train()
 
     return best_psnr_l, best_psnr_t
