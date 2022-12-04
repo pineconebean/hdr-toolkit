@@ -120,7 +120,6 @@ def _kal_validation(model, optimizer, val_data, epoch, best_val_scores, device, 
             low, ref, high, gt = _data_to_device(data, device)
             pred = model(low, ref, high)
 
-            pred, gt = pred.squeeze(), gt.squeeze()
             mu_pred, mu_gt = tonemap(pred), tonemap(gt)
 
             psnr_l = (i * psnr_l + psnr(pred, gt)) / (i + 1)

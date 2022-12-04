@@ -70,7 +70,7 @@ def prepare_validation_data(src, dst, size):
         ldr_data, hdr_data = _read_example_data(ldr_path, hdr_path)
 
         def _crop_val_image(image):
-            return _crop_an_image(image, crop_size=250, step=250, threshold=0)
+            return _crop_an_image(image, crop_size=256, step=250, threshold=0)
 
         hdr_patches = _crop_val_image(hdr_data)
         ldr_patches = []
