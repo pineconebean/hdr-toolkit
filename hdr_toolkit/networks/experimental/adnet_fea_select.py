@@ -31,7 +31,7 @@ class SEBlock(nn.Module):
         return self.select_fea(f)
 
 
-@NETWORK_REGISTRY.register(name='ecadnet')
+# @NETWORK_REGISTRY.register(name='ecadnet')
 class ECADNet(nn.Module):
 
     def __init__(self, n_channels, trans_conv_groups=6, out_activation='relu', use_trans=True):
