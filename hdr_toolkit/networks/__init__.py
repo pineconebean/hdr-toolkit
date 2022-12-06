@@ -10,6 +10,8 @@ def get_model(model_type, out_activation='relu'):
         model = ADNet(n_channels=64, n_dense_layers=3, growth_rate=32, out_activation=out_activation)
     elif model_type == 'ecadnet-gc6':
         model = ECADNet(n_channels=64, trans_conv_groups=6, out_activation=out_activation)
+    elif model_type == 'ecadnet':
+        model = ECADNet(n_channels=64, trans_conv_groups=6, out_activation=out_activation, use_trans=False)
     else:
         raise ValueError('invalid model type')
     return model
