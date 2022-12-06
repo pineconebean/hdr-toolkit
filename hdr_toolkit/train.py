@@ -56,6 +56,7 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
 
     # load checkpoint
     save_dir_path = pathlib.Path(save_dir)
+    save_dir_path.mkdir(exist_ok=True)
     checkpoint_path = save_dir_path.joinpath('checkpoint.pth')
     if checkpoint_path.exists():
         checkpoint = torch.load(str(checkpoint_path))
