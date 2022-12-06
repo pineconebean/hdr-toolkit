@@ -2,9 +2,11 @@ import torch.nn as nn
 import torch
 
 from hdr_toolkit.networks.blocks import PCDAlign, AHDRMergingNet, SpatialAttention, PyramidFeature
+from hdr_toolkit.util.registry import NETWORK_REGISTRY
 
 
 # ref: https://github.com/liuzhen03/ADNet/blob/main/DCNv2/dcn_v2.py
+@NETWORK_REGISTRY.register('ad_net')
 class ADNet(nn.Module):
 
     def __init__(self, n_channels, n_dense_layers, growth_rate, out_activation='relu'):

@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 
 from hdr_toolkit.networks.blocks import AHDRMergingNet, SpatialAttention
+from hdr_toolkit.util.registry import NETWORK_REGISTRY
 
 
+@NETWORK_REGISTRY.register(name='ahdr_net')
 class AHDRNet(nn.Module):
 
     def __init__(self, n_channels=64, out_activation='relu'):

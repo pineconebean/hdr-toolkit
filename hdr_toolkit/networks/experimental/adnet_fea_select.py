@@ -4,6 +4,7 @@ from torch import nn
 
 from hdr_toolkit.networks.blocks import SELayer, ECALayer, PCDAlign, SpatialAttention, PyramidFeature, \
     AHDRMergingNet
+from hdr_toolkit.util.registry import NETWORK_REGISTRY
 
 
 class SEBlock(nn.Module):
@@ -30,6 +31,7 @@ class SEBlock(nn.Module):
         return self.select_fea(f)
 
 
+@NETWORK_REGISTRY.register(name='ecadnet')
 class ECADNet(nn.Module):
 
     def __init__(self, n_channels, trans_conv_groups=6, out_activation='relu'):

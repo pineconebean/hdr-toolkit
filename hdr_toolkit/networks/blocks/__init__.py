@@ -1,8 +1,9 @@
 from hdr_toolkit.networks.blocks.attention import SpatialAttention, SELayer, ECALayer
 from hdr_toolkit.networks.blocks.rdb import DRDB
 from hdr_toolkit.networks.blocks.fusion import AHDRMergingNet
-from hdr_toolkit.networks.blocks.sft import SFTLayer, SFTResBlock, PyramidSFT
-from hdr_toolkit.networks.blocks.pcd import PCDAlign, PyramidFeature
+from hdr_toolkit.networks.blocks.sft import SFTLayer, SFTBlock, PyramidSFT
+from hdr_toolkit.networks.blocks.pcd import PCDAlign
+from hdr_toolkit.networks.blocks.pyramid import PyramidFeature, HomoPyramidFeature, HeteroPyramidFeature
 
-__all__ = ['SpatialAttention', 'SELayer', 'DRDB', 'AHDRMergingNet', 'SFTLayer', 'SFTResBlock', 'PyramidSFT', 'PCDAlign',
-           'PyramidFeature', 'ECALayer']
+__all__ = ['SpatialAttention', 'SELayer', 'DRDB', 'AHDRMergingNet', 'SFTLayer', 'SFTBlock', 'PyramidSFT', 'PCDAlign',
+           'ECALayer', 'HomoPyramidFeature', 'HeteroPyramidFeature']
