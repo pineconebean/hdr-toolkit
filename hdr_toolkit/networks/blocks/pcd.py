@@ -109,3 +109,10 @@ class PCDAlign(nn.Module):
         return l1_fea
 
 
+class SharedOffsetsPCD(nn.Module):
+
+    def __init__(self, n_channels):
+        super(SharedOffsetsPCD, self).__init__()
+
+    def forward(self, non_ref_feat, ref_feat):
+        pass

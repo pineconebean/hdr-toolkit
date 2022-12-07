@@ -49,7 +49,7 @@ class HomoPyramidFeature(nn.Module):
 
     def forward(self, x):
         feat_li = [self.feature_extract(x)]
-        for i in range(self.n_levels):
+        for i in range(self.n_levels - 1):
             feat_li.append(self.down_sample(feat_li[-1]))
         return feat_li
 
@@ -72,7 +72,7 @@ class HeteroPyramidFeature(nn.Module):
 
     def forward(self, x):
         feat_li = [self.feature_extraction(x)]
-        for i in range(self.n_levels):
+        for i in range(self.n_levels - 1):
             feat_li.append(self.down_sample[i](feat_li[-1]))
         return feat_li
 
@@ -94,15 +94,6 @@ class ResidualPyramidFeature(nn.Module):
         feat_l2 = self.down_sample
 
 
-def _create_down_sample_conv(n_channels):
-    return nn.Sequential(
-        nn.Conv2d(n_channels, n_channels, kernel_size=3, stride=2, padding=1),
-        nn.LeakyReLU(negative_slope=0.1, inplace=True),
-        nn.Conv2d(n_channels, n_channels, kernel_size=3, stride=1, padding=1),
-        nn.LeakyReLU(negative_slope=0.1, inplace=True)
-    )
-
-
 # Ref: ADNet
 class ResBlock(nn.Module):
 
@@ -119,3 +110,12 @@ class ResBlock(nn.Module):
     def forward(self, x):
         res = self.conv2(self.act(self.conv1(x)))
         return x + res * self.res_scale
+
+
+def _create_down_sample_conv(n_channels):
+    return nn.Sequential(
+        nn.Conv2d(n_channels, n_channels, kernel_size=3, stride=2, padding=1),
+        nn.LeakyReLU(negative_slope=0.1, inplace=True),
+        nn.Conv2d(n_channels, n_channels, kernel_size=3, stride=1, padding=1),
+        nn.LeakyReLU(negative_slope=0.1, inplace=True)
+    )
