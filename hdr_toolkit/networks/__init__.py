@@ -13,6 +13,8 @@ def get_model(model_type, out_activation='relu'):
         model = ECADNet(n_channels=64, trans_conv_groups=6, out_activation=out_activation)
     elif model_type == 'ecadnet':
         model = ECADNet(n_channels=64, trans_conv_groups=6, out_activation=out_activation, use_trans=False)
+    elif model_type == 'psftd':
+        model = PSFTDNet(out_activation=out_activation)
     else:
         raise ValueError('invalid model type')
     return model
