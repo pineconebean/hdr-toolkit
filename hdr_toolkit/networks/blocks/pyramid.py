@@ -67,7 +67,7 @@ class HeteroPyramidFeature(nn.Module):
         self.n_levels = n_levels
         self.feature_extraction = ResBlock(n_channels)
         self.down_sample = nn.ModuleList()
-        for i in range(n_levels):
+        for i in range(n_levels - 1):
             self.down_sample.append(_create_down_sample_conv(n_channels))
 
     def forward(self, x):

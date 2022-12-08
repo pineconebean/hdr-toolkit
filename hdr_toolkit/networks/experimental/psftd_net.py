@@ -45,9 +45,11 @@ class PSFTDNet(nn.Module):
 
         # pyramid SFT module
         if naive_pyramid:
-            self.psft = NaivePyramidSFT(n_channels, simple_sft=simple_sft)
+            self.psft_sm = NaivePyramidSFT(n_channels, simple_sft=simple_sft)
+            self.psft_lm = NaivePyramidSFT(n_channels, simple_sft=simple_sft)
         else:
-            self.psft = PyramidSFT(n_channels, simple_sft=simple_sft)
+            self.psft_sm = PyramidSFT(n_channels, simple_sft=simple_sft)
+            self.psft_lm = PyramidSFT(n_channels, simple_sft=simple_sft)
 
         # merging network
         self.merging = AHDRMergingNet(n_channels * 6, n_channels, out_activation)
@@ -60,14 +62,17 @@ class PSFTDNet(nn.Module):
         feat_to_sft_l, feat_to_align_l = features[2]
 
         # align the features with PCD
-        # todo: add shared offsets here
-        aligned_feat_s = self.align_module(feat_to_align_s, feat_to_align_m)
-        aligned_feat_l = self.align_module(feat_to_align_l, feat_to_align_m)
+        if self.share_offsets:
+            aligned_feat_s, feat_to_sft_s = self.align_module(feat_to_align_s, feat_to_align_m, feat_to_sft_s)
+            aligned_feat_l, feat_to_sft_l = self.align_module(feat_to_align_l, feat_to_align_m, feat_to_sft_l)
+        else:
+            aligned_feat_s = self.align_module(feat_to_align_s, feat_to_align_m)
+            aligned_feat_l = self.align_module(feat_to_align_l, feat_to_align_m)
         aligned_feat_m = feat_to_sft_m[0]
 
         # refine the features with SFT
-        sft_feat_s = self.psft(feat_to_sft_s, feat_to_sft_m)
-        sft_feat_l = self.psft(feat_to_sft_l, feat_to_sft_m)
+        sft_feat_s = self.psft_sm(feat_to_sft_s, feat_to_sft_m)
+        sft_feat_l = self.psft_lm(feat_to_sft_l, feat_to_sft_m)
         sft_feat_m = feat_to_sft_m[0]
 
         cat_feat = cat((aligned_feat_s, aligned_feat_m, aligned_feat_l,
