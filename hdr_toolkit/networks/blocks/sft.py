@@ -75,8 +75,6 @@ class NaivePyramidSFT(nn.Module):
         for i in range(self.n_levels):
             cond_li.append(self.cond_convs[i](cat((non_ref_feat[i], ref_feat[i]), dim=1)))
         # do SFT for each level
-        print(non_ref_feat[-1].shape)
-        print(cond_li[-1].shape)
         sft_last_out = self.sft[-1](non_ref_feat[-1], cond_li[-1])
         for i in reversed(range(self.n_levels - 1)):
             sft_curr_out = self.sft[i](non_ref_feat[i], cond_li[i])

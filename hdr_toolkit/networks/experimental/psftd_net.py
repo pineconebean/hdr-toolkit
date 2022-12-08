@@ -14,7 +14,7 @@ class PSFTDNet(nn.Module):
                  share_offsets=False,
                  extract_same_feat=False,
                  same_conv_for_pyramid=True,
-                 naive_pyramid=True,
+                 naive_pyramid_sft=True,
                  simple_sft=True):
         super(PSFTDNet, self).__init__()
 
@@ -44,7 +44,7 @@ class PSFTDNet(nn.Module):
             self.align_module = PCDAlign(n_channels)
 
         # pyramid SFT module
-        if naive_pyramid:
+        if naive_pyramid_sft:
             self.psft_sm = NaivePyramidSFT(n_channels, simple_sft=simple_sft)
             self.psft_lm = NaivePyramidSFT(n_channels, simple_sft=simple_sft)
         else:

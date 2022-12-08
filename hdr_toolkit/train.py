@@ -80,7 +80,8 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
             for batch, d in enumerate(data):
                 low, ref, high, gt = _data_to_device(d, device)
                 hdr_pred = model(low, ref, high)
-
+                if hdr_pred is None:
+                    raise ValueError('hdr prediction is None')
                 loss = loss_func(tonemap(hdr_pred, dataset=dataset), tonemap(gt, dataset=dataset))
 
                 optimizer.zero_grad()
