@@ -77,7 +77,7 @@ class PSFTDNet(nn.Module):
 
         cat_feat = cat((aligned_feat_s, aligned_feat_m, aligned_feat_l,
                         sft_feat_s, sft_feat_m, sft_feat_l), dim=1)
-        self.merging(cat_feat, aligned_feat_m)
+        return self.merging(cat_feat, aligned_feat_m)
 
     def _generate_feature(self, short, mid, long):
         def _generate_same(x):
