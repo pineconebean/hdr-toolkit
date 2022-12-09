@@ -15,6 +15,7 @@ class PSFTDNet(nn.Module):
                  extract_same_feat=False,
                  same_conv_for_pyramid=True,
                  naive_pyramid_sft=True,
+                 sft_learn_residual=False,
                  simple_sft=True):
         super(PSFTDNet, self).__init__()
 
@@ -22,20 +23,14 @@ class PSFTDNet(nn.Module):
         self.share_offsets = share_offsets
 
         # first convolution layer for extracting initial features
-        self.first_conv = nn.Conv2d(in_channels, n_channels, 3, 1, 1)
-        if not extract_same_feat:
-            self.first_conv = nn.ModuleList((self.first_conv, nn.Conv2d(in_channels, n_channels, 3, 1, 1)))
+        self.first_conv = self._create_extract_feature_module(nn.Conv2d, in_channels, n_channels, 3, 1, 1)
 
         # modules for extracting pyramid features
         self.pyramid_feat_extract = nn.ModuleList()
         if same_conv_for_pyramid:
-            self.pyramid_feat_extract = HomoPyramidFeature(n_channels)
-            if not extract_same_feat:
-                self.pyramid_feat_extract = nn.ModuleList([self.pyramid_feat_extract, HomoPyramidFeature(n_channels)])
+            self.pyramid_feat_extract = self._create_extract_feature_module(HomoPyramidFeature, n_channels)
         else:
-            self.pyramid_feat_extract = HeteroPyramidFeature(n_channels)
-            if not extract_same_feat:
-                self.pyramid_feat_extract = nn.ModuleList([self.pyramid_feat_extract, HeteroPyramidFeature(n_channels)])
+            self.pyramid_feat_extract = self._create_extract_feature_module(HeteroPyramidFeature, n_channels)
 
         # align module
         if share_offsets:
@@ -48,8 +43,8 @@ class PSFTDNet(nn.Module):
             self.psft_sm = NaivePyramidSFT(n_channels, simple_sft=simple_sft)
             self.psft_lm = NaivePyramidSFT(n_channels, simple_sft=simple_sft)
         else:
-            self.psft_sm = PyramidSFT(n_channels, simple_sft=simple_sft)
-            self.psft_lm = PyramidSFT(n_channels, simple_sft=simple_sft)
+            self.psft_sm = PyramidSFT(n_channels, simple_sft=simple_sft, sft_learn_residual=sft_learn_residual)
+            self.psft_lm = PyramidSFT(n_channels, simple_sft=simple_sft, sft_learn_residual=sft_learn_residual)
 
         # merging network
         self.merging = AHDRMergingNet(n_channels * 6, n_channels, out_activation)
@@ -68,7 +63,7 @@ class PSFTDNet(nn.Module):
         else:
             aligned_feat_s = self.align_module(feat_to_align_s, feat_to_align_m)
             aligned_feat_l = self.align_module(feat_to_align_l, feat_to_align_m)
-        aligned_feat_m = feat_to_sft_m[0]
+        aligned_feat_m = feat_to_align_m[0]
 
         # refine the features with SFT
         sft_feat_s = self.psft_sm(feat_to_sft_s, feat_to_sft_m)
@@ -92,3 +87,9 @@ class PSFTDNet(nn.Module):
 
         generate = _generate_same if self.extract_same_feat else _generate_different
         return generate(short), generate(mid), generate(long)
+
+    def _create_extract_feature_module(self, module, *args, **kwargs):
+        if self.extract_same_feat:
+            return module(*args, **kwargs)
+        else:
+            return nn.ModuleList((module(*args, **kwargs), module(*args, **kwargs)))

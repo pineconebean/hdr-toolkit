@@ -43,6 +43,7 @@ class SFTBlock(nn.Module):
 
 class NaivePyramidSFT(nn.Module):
     """PyramidSFT which generates the condition maps at each level without condition maps from higher level"""
+
     def __init__(self, n_channels, n_levels=3, simple_sft=False, sft_learn_residual=False):
         """
         Args:
@@ -66,47 +67,36 @@ class NaivePyramidSFT(nn.Module):
                 self.sft.append(SFTLayer(n_channels, n_channels, n_channels))
             else:
                 self.sft.append(SFTBlock(n_channels, n_channels, n_channels, sft_learn_residual))
+
+        # cascaded sft block
+        self.cas_cond_convs = _create_condition_convs(n_channels)
+        if simple_sft:
+            self.cas_sft = SFTLayer(n_channels, n_channels, n_channels)
+        else:
+            self.cas_sft = SFTBlock(n_channels, n_channels, n_channels, sft_learn_residual)
+
         self.up_sample = nn.Upsample(scale_factor=2, mode='bilinear')
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
     def forward(self, non_ref_feat, ref_feat):
         # generate condition maps for each level
-        cond_li = []
+        cond_maps = []
         for i in range(self.n_levels):
-            cond_li.append(self.cond_convs[i](cat((non_ref_feat[i], ref_feat[i]), dim=1)))
+            cond_maps.append(self.cond_convs[i](cat((non_ref_feat[i], ref_feat[i]), dim=1)))
         # do SFT for each level
-        sft_last_out = self.sft[-1](non_ref_feat[-1], cond_li[-1])
+        sft_last_out = self.sft[-1](non_ref_feat[-1], cond_maps[-1])
         for i in reversed(range(self.n_levels - 1)):
-            sft_curr_out = self.sft[i](non_ref_feat[i], cond_li[i])
+            sft_curr_out = self.sft[i](non_ref_feat[i], cond_maps[i])
             sft_last_out = self.up_sample(sft_last_out)
             sft_curr_out = self.leaky_relu(self.feat_cat_conv[i](cat((sft_curr_out, sft_last_out), dim=1)))
             sft_last_out = sft_curr_out
 
-        return sft_last_out
+        cas_cond_map = self.cas_cond_convs(cat((sft_last_out, ref_feat[0]), dim=1))
+        return self.cas_sft(sft_last_out, cas_cond_map)
 
 
 class PyramidSFT(nn.Module):
-    """EDVR network structure for video super-resolution.
 
-    Now only support X4 upsampling factor.
-    Paper:
-    EDVR: Video Restoration with Enhanced Deformable Convolutional Networks.
-
-    Params:
-        n_channels (int): Channel number of inputs.
-        out_channels (int): Channel number of outputs.
-        mid_channels (int): Channel number of intermediate features.
-            Default: 64.
-        num_frames (int): Number of input frames. Default: 5.
-        deform_groups (int): Deformable groups. Defaults: 8.
-        num_blocks_extraction (int): Number of blocks for feature extraction.
-            Default: 5.
-        num_blocks_reconstruction (int): Number of blocks for reconstruction.
-            Default: 10.
-        center_frame_idx (int): The index of center frame. Frame counting from
-            0. Default: 2.
-        with_tsa (bool): Whether to use TSA module. Default: True.
-    """
     def __init__(self, n_channels=64, n_levels=3, simple_sft=False, sft_learn_residual=False):
         super(PyramidSFT, self).__init__()
         self.n_levels = n_levels
@@ -125,6 +115,14 @@ class PyramidSFT(nn.Module):
                 self.sft.append(SFTLayer(n_channels, n_channels, n_channels))
             else:
                 self.sft.append(SFTBlock(n_channels, n_channels, n_channels, sft_learn_residual))
+
+        # cascaded sft block
+        self.cas_cond_convs = _create_condition_convs(n_channels)
+        if simple_sft:
+            self.cas_sft = SFTLayer(n_channels, n_channels, n_channels)
+        else:
+            self.cas_sft = SFTBlock(n_channels, n_channels, n_channels, sft_learn_residual)
+
         self.up_sample = nn.Upsample(scale_factor=2, mode='bilinear')
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
@@ -146,7 +144,8 @@ class PyramidSFT(nn.Module):
             sft_curr_out = self.leaky_relu(self.feat_cat_conv[i](cat((sft_curr_out, sft_prev_out), dim=1)))
             sft_prev_out = sft_curr_out
 
-        return sft_prev_out
+        cas_cond_map = self.cas_cond_convs(cat((sft_prev_out, ref_feat[0]), dim=1))
+        return self.cas_sft(sft_prev_out, cas_cond_map)
 
 
 def _create_condition_convs(n_channels):
