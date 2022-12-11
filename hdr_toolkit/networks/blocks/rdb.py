@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from hdr_toolkit.networks.blocks.attention import BAPack
 
 
 # reference: https://github.com/qingsenyangit/AHDRNet/blob/master/model.py
@@ -22,15 +23,17 @@ class DRDB(nn.Module):
         return out + x
 
 
-class DRDBConv(nn.Module):
+class BAEnhancedDRDB(DRDB):
 
-    def __init__(self, in_channels, growth_rate, kernel_size=3):
-        super(DRDBConv, self).__init__()
-        self.conv = nn.Conv2d(in_channels, growth_rate, kernel_size, padding='same', dilation=2, bias=True)
+    def __init__(self, n_channels, growth_rate, n_dense_layers, ba_type='default'):
+        super(BAEnhancedDRDB, self).__init__(n_channels, growth_rate, n_dense_layers)
+        self.ba_pack = BAPack.create(n_channels, ba_type)
 
-    def forward(self, x):
-        out = F.relu(self.conv(x))
-        return torch.cat((x, out), dim=1)
+    def forward(self, x, extra_feat):
+        out = self.drdb_conv_layers(x)
+        out = self.conv_1x1(out)
+        out = self.ba_pack(out, extra_feat)
+        return out + x
 
 
 class DeformRDB(nn.Module):
@@ -40,3 +43,14 @@ class DeformRDB(nn.Module):
 
     def forward(self, x):
         pass
+
+
+class DRDBConv(nn.Module):
+
+    def __init__(self, in_channels, growth_rate, kernel_size=3):
+        super(DRDBConv, self).__init__()
+        self.conv = nn.Conv2d(in_channels, growth_rate, kernel_size, padding='same', dilation=2, bias=True)
+
+    def forward(self, x):
+        out = F.relu(self.conv(x))
+        return torch.cat((x, out), dim=1)

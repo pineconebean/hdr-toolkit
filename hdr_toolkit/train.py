@@ -170,9 +170,9 @@ def _data_to_device(data, device):
 
 
 if __name__ == '__main__':
-    model_choices = ('ahdrnet', 'adnet', 'ecadnet-gc6', 'ecadnet', 'psftd')
+    # model_choices = ('ahdrnet', 'adnet', 'ecadnet-gc6', 'ecadnet', 'psftd')
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model', choices=model_choices, required=True)
+    parser.add_argument('-m', '--model', required=True)
     parser.add_argument('--save-dir', dest='save_dir', required=True)
     parser.add_argument('--activation', choices=['relu', 'sigmoid'], default='relu')
     parser.add_argument('--loss', choices=['l1', 'mse'], default='mse')

@@ -58,9 +58,9 @@ def test(model_type, checkpoint_path, dataset, input_dir, out_dir, device, write
 
 
 if __name__ == '__main__':
-    model_choices = ('ahdr', 'adnet', 'ecadnet-gc6', 'ecadnet', 'psftd')
+    # model_choices = ('ahdr', 'adnet', 'ecadnet-gc6', 'ecadnet', 'psftd', 'bahdr-var1')
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model-type', dest='model', choices=model_choices, required=True)
+    parser.add_argument('--model-type', dest='model', required=True)
     parser.add_argument('--checkpoint', required=True)
     parser.add_argument('--data', choices=['ntire', 'kalantari'], default='ntire')
     parser.add_argument('--data-with-gt', dest='with_gt', action='store_true')

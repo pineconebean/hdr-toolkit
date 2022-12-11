@@ -2,6 +2,7 @@ from hdr_toolkit.networks.adnet import ADNet
 from hdr_toolkit.networks.ahdrnet import AHDRNet
 from hdr_toolkit.networks.experimental.adnet_fea_select import ECADNet
 from hdr_toolkit.networks.experimental.psftd_net import PSFTDNet
+from hdr_toolkit.networks.experimental.c_att_merging import BAHDRNet
 
 
 def get_model(model_type, out_activation='relu'):
@@ -15,6 +16,8 @@ def get_model(model_type, out_activation='relu'):
         model = ECADNet(n_channels=64, trans_conv_groups=6, out_activation=out_activation, use_trans=False)
     elif model_type == 'psftd':
         model = PSFTDNet(out_activation=out_activation)
+    elif model_type == 'ba-default':
+        model = BAHDRNet(n_channels=64, out_activation=out_activation)
     else:
         raise ValueError('invalid model type')
     return model
