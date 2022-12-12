@@ -168,6 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--write', dest='write_dir', required=True)
     parser.add_argument('--op', dest='op', required=True, choices=['reorganize', 'crop', 'prepare_val'])
     parser.add_argument('--val-size', dest='val_size', default=6, type=int)
+    parser.add_argument('--include', nargs='+', type=int)
     args = parser.parse_args()
     if args.op == 'crop':
         crop_training_files(args.read_dir, args.write_dir)
