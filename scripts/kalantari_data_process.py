@@ -55,7 +55,7 @@ def prepare_validation_data(src, dst, size, include):
     target_dir.mkdir(exist_ok=True)
 
     examples = _collect_file_names(src_dir)
-    examples.difference(set(include))
+    examples = examples.difference(set(include))
     chosen_examples = np.random.choice(list(examples), size, replace=False).tolist() + include
     print(chosen_examples)
     for e in chosen_examples:
