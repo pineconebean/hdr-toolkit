@@ -56,7 +56,7 @@ def prepare_validation_data(src, dst, size, include):
 
     examples = _collect_file_names(src_dir)
     examples = examples.difference(set(include))
-    chosen_examples = np.random.choice(list(examples), size, replace=False).tolist() + include
+    chosen_examples = np.random.choice(list(examples), size - len(include), replace=False).tolist() + include
     print(chosen_examples)
     for e in chosen_examples:
         # copy exposure files
