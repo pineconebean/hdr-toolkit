@@ -173,6 +173,6 @@ if __name__ == '__main__':
     if args.op == 'crop':
         crop_training_files(args.read_dir, args.write_dir)
     elif args.op == 'prepare_val':
-        prepare_validation_data(args.read_dir, args.write_dir, args.val_size)
+        prepare_validation_data(args.read_dir, args.write_dir, args.val_size, args.include)
     else:
         reorganize_test_files(args.read_dir, args.write_dir)
