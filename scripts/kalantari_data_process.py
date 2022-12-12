@@ -48,15 +48,16 @@ def crop_training_files(src, dst):
         print(f'Progress: {len(hdr_patches) * len(hdr_patches[0]) * (e_cnt + 1)} / {61568}')
 
 
-def prepare_validation_data(src, dst, size):
+def prepare_validation_data(src, dst, size, include):
     r"""Randomly copy or link data from source directory as validation dataset (only for Kalantari dataset)"""
     target_dir = Path(dst)
     src_dir = Path(src)
     target_dir.mkdir(exist_ok=True)
 
     examples = _collect_file_names(src_dir)
-    print(examples)
-    chosen_examples = np.random.choice(examples, size, replace=False).tolist()
+    examples.difference(set(include))
+    chosen_examples = np.random.choice(list(examples), size, replace=False).tolist() + include
+    print(chosen_examples)
     for e in chosen_examples:
         # copy exposure files
         exposure_path = src_dir.joinpath(f'{e}_exposure.txt')
@@ -84,12 +85,12 @@ def prepare_validation_data(src, dst, size):
             cv2.imwrite(str(target_dir.joinpath(f'{e}_{i:02d}_long.tif')), ldr_patches[2][i])
 
 
-def _collect_file_names(src_dir: Path, suffix='_gt.hdr') -> list:
+def _collect_file_names(src_dir: Path, suffix='_gt.hdr') -> set:
     all_files = src_dir.glob(f'*{suffix}')
-    result = []
+    result = set()
 
     for file in all_files:
-        result.append(file.name[:-len(suffix)])
+        result.add(file.name[:-len(suffix)])
 
     return result
 
