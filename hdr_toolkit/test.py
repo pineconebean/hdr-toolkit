@@ -11,6 +11,7 @@ from data.writers import KalantariWriter, NTIREWriter
 from hdr_toolkit.hdr_ops.tonemap import tonemap
 from hdr_toolkit.metrics.psnr import psnr
 from hdr_toolkit.networks import get_model
+from hdr_toolkit.util.logging import get_logger
 
 
 def test(model_type, checkpoint_path, dataset, input_dir, out_dir, device, write_tonemap_gt, with_gt, act):
@@ -23,7 +24,9 @@ def test(model_type, checkpoint_path, dataset, input_dir, out_dir, device, write
     data_loader = DataLoader(get_dataset(dataset, input_dir, with_gt=with_gt), batch_size=1, shuffle=False)
 
     writer = NTIREWriter(out_dir) if dataset == 'ntire' else KalantariWriter(out_dir)
-
+    logger = get_logger('test', str(out_dir.joinpath('test.log')))
+    scores_linear = []
+    scores_tonemap = []
     with torch.no_grad():
         for batch, data in enumerate(data_loader):
             start_time = time.time()
@@ -35,11 +38,14 @@ def test(model_type, checkpoint_path, dataset, input_dir, out_dir, device, write
             hdr_pred = hdr_pred.squeeze()
             mu_pred = tonemap(hdr_pred, dataset=dataset)
 
-            print('elapsed time {}'.format(time.time() - start_time))
+            logger.info('elapsed time {}'.format(time.time() - start_time))
             if dataset == 'kalantari':
                 gt = data['gt'].squeeze().to(device)
                 mu_gt = tonemap(gt)
-                print(f'psnr-l: {psnr(hdr_pred, gt)} | psnr-t: {psnr(mu_pred, mu_gt)}')
+                psnr_l, psnr_t = psnr(hdr_pred, gt).cpu().numpy(), psnr(mu_pred, mu_gt).cpu().numpy()
+                logger.info(f'psnr-l: {psnr_l} | psnr-t: {psnr_t}')
+                scores_linear.append(psnr_l)
+                scores_tonemap.append(psnr_t)
 
             img_id = data['img_id']
             if dataset == 'kalantari':
@@ -55,6 +61,8 @@ def test(model_type, checkpoint_path, dataset, input_dir, out_dir, device, write
                 mu_gt = tonemap(gt, dataset=dataset)
                 if write_tonemap_gt:
                     writer.write_mu_gt(mu_gt.squeeze().permute(1, 2, 0).detach().cpu().numpy(), img_id)
+    logger.info(f'avg psnr-t: {np.mean(scores_tonemap)}')
+    logger.info(f'avg psnr-l: {np.mean(scores_linear)}')
 
 
 if __name__ == '__main__':
