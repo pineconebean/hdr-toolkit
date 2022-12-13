@@ -1,6 +1,6 @@
 from hdr_toolkit.networks.adnet import ADNet
 from hdr_toolkit.networks.ahdrnet import AHDRNet
-from hdr_toolkit.networks.experimental import ECADNet, PSFTDNet, BAHDRNet, ResRefAHDR, ResRefSFTNet
+from hdr_toolkit.networks.experimental import ECADNet, PSFTDNet, BAHDRNet, ResRefAHDR, ResRefSFTNet, ResRefDANet
 
 
 def get_model(model_type, out_activation='relu'):
@@ -24,6 +24,12 @@ def get_model(model_type, out_activation='relu'):
         model = ResRefSFTNet.create('one-sft', n_channels=64, out_activation=out_activation)
     elif model_type == 'rr-sft-two':
         model = ResRefSFTNet.create('two-sft', n_channels=64, out_activation=out_activation)
+    elif model_type == 'rr-da-default':
+        model = ResRefDANet.create('default', n_channels=64, out_activation=out_activation)
+    elif model_type == 'rr-da-no-act':
+        model = ResRefDANet.create('no_act', n_channels=64, out_activation=out_activation)
+    elif model_type == 'rr-da-g16':
+        model = ResRefDANet.create('groups16', n_channels=64, out_activation=out_activation)
     else:
         raise ValueError('invalid model type')
     return model

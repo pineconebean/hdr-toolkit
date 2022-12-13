@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from hdr_toolkit.networks.blocks import AHDRMergingNet, SpatialAttention, ResSFTPack
+from hdr_toolkit.networks.blocks import AHDRMergingNet, SpatialAttention, ResSFTPack, VanillaDA
 
 
 class ResRefAHDR(nn.Module):
@@ -86,12 +86,43 @@ class ResRefSFTNet(nn.Module):
             return cls(n_channels, out_activation)
         elif sft_res_type == 'one-sft':
             return cls(n_channels, out_activation, n_sft=1, only_sft=False, simple_cond=False)
+        else:
+            raise KeyError(f'Pre-defined type {sft_res_type} is not valid')
 
 
-class ResRefADNet(nn.Module):
+class ResRefDANet(nn.Module):
 
-    def __init__(self):
-        super(ResRefADNet, self).__init__()
+    def __init__(self, n_channels, out_activation='sigmoid', groups=8, **kwargs):
+        super(ResRefDANet, self).__init__()
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+
+        self.extract_feat = nn.Sequential(
+            nn.Conv2d(6, n_channels, 3, 1, 1),
+            self.leaky_relu
+        )
+
+        self.da_sm = VanillaDA(n_channels, groups, **kwargs)
+        self.da_lm = VanillaDA(n_channels, groups, **kwargs)
+
+        self.merging = AHDRMergingNet(n_channels * 3, n_channels, out_activation)
 
     def forward(self, short, mid, long):
-        pass
+        feat_s = self.extract_feat(short)
+        feat_m = self.extract_feat(mid)
+        feat_l = self.extract_feat(long)
+
+        feat_s = self.da_sm(feat_s, feat_m) + feat_m
+        feat_l = self.da_lm(feat_l, feat_m) + feat_m
+
+        return self.merging(torch.cat((feat_s, feat_m, feat_l), dim=1), feat_m)
+
+    @classmethod
+    def create(cls, pre_defined, n_channels, out_activation):
+        if pre_defined == 'default':
+            return cls(n_channels, out_activation)
+        elif pre_defined == 'no_act':
+            return cls(n_channels, out_activation, with_act=False)
+        elif pre_defined == 'groups16':
+            return cls(n_channels, out_activation, groups=16)
+        else:
+            raise KeyError(f'Pre-defined type {pre_defined} is not valid')

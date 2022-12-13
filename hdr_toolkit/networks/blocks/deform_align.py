@@ -4,6 +4,27 @@ from torch import nn
 from torchvision.ops import DeformConv2d
 
 
+class VanillaDA(nn.Module):
+
+    def __init__(self, n_channels, groups=8, with_act=True):
+        super(VanillaDA, self).__init__()
+        self.with_act = with_act
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        self.offset_convs = nn.Sequential(
+            nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1),
+            self.leaky_relu,
+            nn.Conv2d(n_channels, n_channels, 3, 1, 1),
+            self.leaky_relu
+        )
+        self.deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, 1, 1, groups=groups)
+
+    def forward(self, non_ref, ref):
+        offset_feat = self.offset_convs(torch.cat((non_ref, ref), dim=1))
+        if self.with_act:
+            return self.leaky_relu(self.deform_conv(non_ref, offset_feat))
+        return self.deform_conv(non_ref, offset_feat)
+
+
 class PCDAlign(nn.Module):
 
     def __init__(self, n_channels=64, groups=8):
@@ -108,7 +129,8 @@ class SharedOffsetsPCD(nn.Module):
         deform_non_ref_prev, offset_feat_prev = None, None
         for i in reversed(range(self.n_levels)):
             # generate offset features for current level
-            offset_feat_curr = self.leaky_relu(self.offset_conv_first[i](torch.cat((non_ref_feat[i], ref_feat[i]), dim=1)))
+            offset_feat_curr = self.leaky_relu(
+                self.offset_conv_first[i](torch.cat((non_ref_feat[i], ref_feat[i]), dim=1)))
             if i < self.n_levels - 1:
                 offset_feat_curr = torch.cat((offset_feat_curr, self.up_sample(offset_feat_prev)), dim=1)
                 offset_feat_curr = self.leaky_relu(self.offset_conv_concat[i](offset_feat_curr))
