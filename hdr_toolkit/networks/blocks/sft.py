@@ -41,6 +41,56 @@ class SFTBlock(nn.Module):
             return fea
 
 
+class ResSFTPack(nn.Module):
+    """
+    Residual Spatial Feature Transform Pack
+
+    The ResSFTPack accepts a feature and an extra feature as inputs, and learn residuals of
+    the extra feature using spatial feature transform.
+    """
+
+    def __init__(self, feat_channels, mid_channels, n_sft=1, only_sft=True, simple_cond=True):
+        """
+        Args:
+            feat_channels: channels of features.
+            mid_channels: channels of the middle layer in SFT which is used to provide fine-grained control
+            n_sft: the number of sft layers
+            only_sft: if True, there will be no convolution layers after applying SFT to current features
+            simple_cond: only use one convolution layer to learn the condition map.
+                This is used to be same as the attention module used in AHDRNet
+        """
+        super(ResSFTPack, self).__init__()
+        self.n_sft = n_sft
+        self.only_sft = only_sft
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+
+        if simple_cond:
+            self.cond = nn.Sequential(nn.Conv2d(feat_channels * 2, feat_channels * 2, 3, 1, 1), self.leaky_relu)
+            cond_channels = feat_channels * 2
+        else:
+            self.cond = _create_condition_convs(feat_channels)
+            cond_channels = feat_channels
+
+        self.sft_layers = nn.ModuleList()
+        self.conv_after_sft = nn.ModuleList()
+        for _ in range(n_sft):
+            self.sft_layers.append(SFTLayer(feat_channels, cond_channels, mid_channels))
+            if not only_sft:
+                self.conv_after_sft.append(nn.Conv2d(feat_channels, feat_channels, 3, 1, 1))
+
+    def forward(self, x, extra_feat):
+        cond_maps = self.cond(cat((x, extra_feat), dim=1))
+        feat = x
+
+        if self.only_sft:
+            feat = self.sft_layers[0](feat, cond_maps)
+        else:
+            for i in range(self.n_sft):
+                feat = self.sft_layers[i](feat, cond_maps)
+                feat = self.leaky_relu(self.conv_after_sft[i](feat))
+        return feat + extra_feat
+
+
 class NaivePyramidSFT(nn.Module):
     """PyramidSFT which generates the condition maps at each level without condition maps from higher level"""
 

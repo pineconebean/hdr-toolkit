@@ -1,6 +1,6 @@
 from .adnet_fea_select import ECADNet
 from .psftd_net import PSFTDNet
 from .c_att_merging import BAHDRNet
-from .learn_res_of_ref import ResRefAHDR
+from .learn_res_of_ref import ResRefAHDR, ResRefSFTNet, ResRefADNet
 
-__all__ = ['ECADNet', 'PSFTDNet', 'BAHDRNet', 'ResRefAHDR']
+__all__ = ['ECADNet', 'PSFTDNet', 'BAHDRNet', 'ResRefAHDR', ResRefSFTNet]
