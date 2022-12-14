@@ -28,9 +28,9 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
         model.to(device)
         data_loader = DataLoader(get_dataset(dataset, input_dir, with_gt=with_gt), batch_size=1, shuffle=False)
 
-        out_dir = out_dir.joinpath(out_dir_name)
-        writer = NTIREWriter(out_dir) if dataset == 'ntire' else KalantariWriter(out_dir)
-        logger = get_logger(out_dir_name, str(out_dir.joinpath('test.log')))
+        curr_out_dir = out_dir.joinpath(out_dir_name)
+        writer = NTIREWriter(curr_out_dir) if dataset == 'ntire' else KalantariWriter(curr_out_dir)
+        logger = get_logger(out_dir_name, str(curr_out_dir.joinpath('test.log')))
         scores_linear = []
         scores_tonemap = []
         with torch.no_grad():
