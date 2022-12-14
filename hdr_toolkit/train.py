@@ -64,8 +64,8 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
         model.to(device)
         optimizer.load_state_dict(checkpoint['optimizer'])
         trained_epochs = checkpoint['epoch']
-        if 'val_scores' in checkpoint:
-            best_val_scores = checkpoint['val_scores']
+        # if 'val_scores' in checkpoint:
+        #     best_val_scores = checkpoint['val_scores']
 
     logger = get_logger(logger_name, log_path)
     val_logger = get_logger('validation', str(save_dir_path.joinpath('validation.log')))

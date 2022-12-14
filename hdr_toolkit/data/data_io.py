@@ -4,17 +4,25 @@ import torch
 import torchvision.transforms.functional as F
 
 
-def read_ldr(path, bit):
-    return F.to_tensor(cv2.cvtColor(cv2.imread(path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
-                       .astype(np.float32) / (2 ** bit - 1))
+def read_ldr(path, bit, scale_factor=1.):
+    if scale_factor == 1:
+        return F.to_tensor(cv2.cvtColor(cv2.imread(path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
+                           .astype(np.float32) / (2 ** bit - 1))
+    else:
+        img = cv2.cvtColor(cv2.imread(path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
+        h, w, c = img.shape
+        # reference: https://stackoverflow.com/questions/23853632/which-kind-of-interpolation-best-for-resizing-image
+        inter_method = cv2.INTER_AREA if scale_factor < 1 else cv2.INTER_CUBIC
+        img = cv2.resize(img, (int(w * scale_factor), int(h * scale_factor)), interpolation=inter_method)
+        return F.to_tensor(img.astype(np.float32) / (2 ** bit - 1))
 
 
 def gamma_correction(img, exposure, gamma):
-    return (img ** gamma) * 2.0 ** (-1 * exposure)
+    return (img ** gamma) * (2.0 ** (-1 * exposure))
 
 
 def ev_align(img, exposure, gamma):
-    return ((img ** gamma) * 2.0 ** (-1 * exposure)) ** (1 / gamma)
+    return ((img ** gamma) / (2.0 ** exposure)) ** (1 / gamma)
 
 
 def read_tiff(path, exposure, cat=True, is_uint8=True):
