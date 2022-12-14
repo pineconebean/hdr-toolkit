@@ -14,55 +14,61 @@ from hdr_toolkit.networks import get_model
 from hdr_toolkit.util.logging import get_logger
 
 
-def test(model_type, checkpoint_path, dataset, input_dir, out_dir, device, write_tonemap_gt, with_gt, act):
+def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonemap_gt, with_gt, act):
     out_dir = pathlib.Path(out_dir)
-    model = get_model(model_type, out_activation=act)
-    checkpoint = torch.load(checkpoint_path, map_location=torch.device(device))
-    model.load_state_dict(checkpoint['model'])
-    model.eval()
-    model.to(device)
-    data_loader = DataLoader(get_dataset(dataset, input_dir, with_gt=with_gt), batch_size=1, shuffle=False)
+    ckpt_dir = pathlib.Path(ckpt_dir)
+    ckpt_files = ['checkpoint.pth', 'best-t-checkpoint.pth', 'best-l-checkpoint.pth']
+    out_dir_names = ['last', 'best-t', 'best-l']
 
-    writer = NTIREWriter(out_dir) if dataset == 'ntire' else KalantariWriter(out_dir)
-    logger = get_logger('test', str(out_dir.joinpath('test.log')))
-    scores_linear = []
-    scores_tonemap = []
-    with torch.no_grad():
-        for batch, data in enumerate(data_loader):
-            start_time = time.time()
-            ldr_images = data['ldr_images']
-            low = ldr_images[0].to(device)
-            ref = ldr_images[1].to(device)
-            high = ldr_images[2].to(device)
-            hdr_pred = model(low, ref, high)
-            hdr_pred = hdr_pred.squeeze()
-            mu_pred = tonemap(hdr_pred, dataset=dataset)
+    for curr_file, out_dir_name in zip(ckpt_files, out_dir_names):
+        ckpt = torch.load(str(ckpt_dir.joinpath(curr_file)))
+        model = get_model(model_type, out_activation=act)
+        model.load_state_dict(ckpt['model'])
+        model.eval()
+        model.to(device)
+        data_loader = DataLoader(get_dataset(dataset, input_dir, with_gt=with_gt), batch_size=1, shuffle=False)
 
-            logger.info('elapsed time {}'.format(time.time() - start_time))
-            if dataset == 'kalantari':
-                gt = data['gt'].squeeze().to(device)
-                mu_gt = tonemap(gt)
-                psnr_l, psnr_t = psnr(hdr_pred, gt).cpu().numpy(), psnr(mu_pred, mu_gt).cpu().numpy()
-                logger.info(f'psnr-l: {psnr_l} | psnr-t: {psnr_t}')
-                scores_linear.append(psnr_l)
-                scores_tonemap.append(psnr_t)
+        out_dir = out_dir.joinpath(out_dir_name)
+        writer = NTIREWriter(out_dir) if dataset == 'ntire' else KalantariWriter(out_dir)
+        logger = get_logger(out_dir_name, str(out_dir.joinpath('test.log')))
+        scores_linear = []
+        scores_tonemap = []
+        with torch.no_grad():
+            for batch, data in enumerate(data_loader):
+                start_time = time.time()
+                ldr_images = data['ldr_images']
+                low = ldr_images[0].to(device)
+                ref = ldr_images[1].to(device)
+                high = ldr_images[2].to(device)
+                hdr_pred = model(low, ref, high)
+                hdr_pred = hdr_pred.squeeze()
+                mu_pred = tonemap(hdr_pred, dataset=dataset)
 
-            img_id = data['img_id']
-            if dataset == 'kalantari':
-                img_id = img_id[0]
-            elif dataset == 'ntire':
-                img_id = img_id.detach().squeeze().cpu().numpy().astype(np.int32)
-            else:
-                raise ValueError('invalid dataset')
-            writer.write_hdr(hdr_pred.permute(1, 2, 0).detach().cpu().numpy(), img_id)
-            writer.write_tonemap(mu_pred.permute(1, 2, 0).detach().cpu().numpy(), img_id)
-            if with_gt:
-                gt = data['gt'].to(device)
-                mu_gt = tonemap(gt, dataset=dataset)
-                if write_tonemap_gt:
-                    writer.write_mu_gt(mu_gt.squeeze().permute(1, 2, 0).detach().cpu().numpy(), img_id)
-    logger.info(f'avg psnr-t: {np.mean(scores_tonemap)}')
-    logger.info(f'avg psnr-l: {np.mean(scores_linear)}')
+                logger.info('elapsed time {}'.format(time.time() - start_time))
+                if dataset == 'kalantari':
+                    gt = data['gt'].squeeze().to(device)
+                    mu_gt = tonemap(gt)
+                    psnr_l, psnr_t = psnr(hdr_pred, gt).cpu().numpy(), psnr(mu_pred, mu_gt).cpu().numpy()
+                    logger.info(f'psnr-l: {psnr_l} | psnr-t: {psnr_t}')
+                    scores_linear.append(psnr_l)
+                    scores_tonemap.append(psnr_t)
+
+                img_id = data['img_id']
+                if dataset == 'kalantari':
+                    img_id = img_id[0]
+                elif dataset == 'ntire':
+                    img_id = img_id.detach().squeeze().cpu().numpy().astype(np.int32)
+                else:
+                    raise ValueError('invalid dataset')
+                writer.write_hdr(hdr_pred.permute(1, 2, 0).detach().cpu().numpy(), img_id)
+                writer.write_tonemap(mu_pred.permute(1, 2, 0).detach().cpu().numpy(), img_id)
+                if with_gt:
+                    gt = data['gt'].to(device)
+                    mu_gt = tonemap(gt, dataset=dataset)
+                    if write_tonemap_gt:
+                        writer.write_mu_gt(mu_gt.squeeze().permute(1, 2, 0).detach().cpu().numpy(), img_id)
+        logger.info(f'avg psnr-t: {np.mean(scores_tonemap)}')
+        logger.info(f'avg psnr-l: {np.mean(scores_linear)}')
 
 
 if __name__ == '__main__':
