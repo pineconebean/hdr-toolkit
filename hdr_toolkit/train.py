@@ -57,7 +57,7 @@ def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir
     # load checkpoint
     save_dir_path = pathlib.Path(save_dir)
     save_dir_path.mkdir(exist_ok=True, parents=True)
-    checkpoint_path = save_dir_path.joinpath('checkpoint.pth')
+    checkpoint_path = save_dir_path.joinpath('ckpt.pth')
     if checkpoint_path.exists():
         checkpoint = torch.load(str(checkpoint_path))
         model.load_state_dict(checkpoint['model'])
@@ -145,11 +145,11 @@ def _kal_validation(model, optimizer, val_data, epoch, batch, best_val_scores, d
     update_l, update_t = False, False
     if psnr_l > best_psnr_l:
         best_psnr_l = psnr_l
-        _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-l-checkpoint.pth')))
+        _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('val-l-ckpt.pth')))
         update_l = True
     if psnr_t > best_psnr_t:
         best_psnr_t = psnr_t
-        _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('best-t-checkpoint.pth')))
+        _save_model(model, optimizer, epoch, str(save_dir_path.joinpath('val-t-ckpt.pth')))
         update_t = True
 
     val_logger.info(f'psnr-l: {psnr_l:.5f} ({best_psnr_l:.5f}{" up" if update_l else ""}) | '

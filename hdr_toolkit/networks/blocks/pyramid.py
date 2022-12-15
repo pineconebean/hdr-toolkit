@@ -1,7 +1,7 @@
 from torch import nn
 
 
-# Ref: ADNet (Legacy module)
+# Copied from: ADNet
 class PyramidFeature(nn.Module):
     def __init__(self, in_channels=6, n_channels=64):
         super(PyramidFeature, self).__init__()

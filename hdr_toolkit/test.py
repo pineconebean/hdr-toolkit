@@ -17,8 +17,8 @@ from hdr_toolkit.util.logging import get_logger
 def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonemap_gt, with_gt, act):
     out_dir = pathlib.Path(out_dir)
     ckpt_dir = pathlib.Path(ckpt_dir)
-    ckpt_files = ['checkpoint.pth', 'best-t-checkpoint.pth', 'best-l-checkpoint.pth']
-    out_dir_names = ['last', 'best-t', 'best-l']
+    ckpt_files = ['checkpoint.pth', 'val-t-checkpoint.pth', 'val-l-checkpoint.pth']
+    out_dir_names = ['last', 'val-t', 'val-l']
 
     for curr_file, out_dir_name in zip(ckpt_files, out_dir_names):
         ckpt = torch.load(str(ckpt_dir.joinpath(curr_file)))

@@ -4,7 +4,7 @@ import argparse
 
 
 def crop_image(input_dir, output_dir, x, y, size):
-    images = Path(input_dir).glob('*')
+    images = Path(input_dir).glob('*.tif')
     for curr in images:
         img = cv2.imread(str(curr), cv2.IMREAD_UNCHANGED)
         print(str(curr))

@@ -100,10 +100,10 @@ def visualize_optical_flow():
 
 
 def main():
-    img_path = '/Users/jundaliao/Documents/HDR/Kalantari/Val/'
-    img_id = '005_14'
+    img_path = '/Users/jundaliao/Documents/HDR/Kalantari/Test2/'
+    img_id = '009'
 
-    optical_flow_for_img(img_path, img_id, 'lm', 'down', scale_factor=1)
+    optical_flow_for_img(img_path, img_id, 'sm', 'up', scale_factor=1)
 
 
 main()
