@@ -26,6 +26,8 @@ def get_model(model_type, out_activation='relu'):
         model = ResRefSFTNet.create('two-sft', n_channels=64, out_activation=out_activation)
     elif model_type == 'rr-da-default':
         model = ResRefDANet.create('default', n_channels=64, out_activation=out_activation)
+    elif model_type == 'rr-da-no-res':
+        model = ResRefDANet.create('no_res', n_channels=64, out_activation=out_activation)
     elif model_type == 'rr-da-no-act':
         model = ResRefDANet.create('no_act', n_channels=64, out_activation=out_activation)
     elif model_type == 'rr-da-g16':

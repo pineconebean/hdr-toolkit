@@ -92,9 +92,10 @@ class ResRefSFTNet(nn.Module):
 
 class ResRefDANet(nn.Module):
 
-    def __init__(self, n_channels, out_activation='sigmoid', groups=8, **kwargs):
+    def __init__(self, n_channels, out_activation='sigmoid', groups=8, learn_res=True, **kwargs):
         super(ResRefDANet, self).__init__()
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+        self.learn_res = learn_res
 
         self.extract_feat = nn.Sequential(
             nn.Conv2d(6, n_channels, 3, 1, 1),
@@ -111,8 +112,11 @@ class ResRefDANet(nn.Module):
         feat_m = self.extract_feat(mid)
         feat_l = self.extract_feat(long)
 
-        feat_s = self.da_sm(feat_s, feat_m) + feat_m
-        feat_l = self.da_lm(feat_l, feat_m) + feat_m
+        feat_s = self.da_sm(feat_s, feat_m)
+        feat_l = self.da_lm(feat_l, feat_m)
+        if self.learn_res:
+            feat_s = feat_s + feat_m
+            feat_l = feat_l + feat_m
 
         return self.merging(torch.cat((feat_s, feat_m, feat_l), dim=1), feat_m)
 
@@ -120,6 +124,8 @@ class ResRefDANet(nn.Module):
     def create(cls, pre_defined, n_channels, out_activation):
         if pre_defined == 'default':
             return cls(n_channels, out_activation)
+        elif pre_defined == 'no_res':
+            return cls(n_channels, out_activation, learn_res=False)
         elif pre_defined == 'no_act':
             return cls(n_channels, out_activation, with_act=False)
         elif pre_defined == 'groups16':

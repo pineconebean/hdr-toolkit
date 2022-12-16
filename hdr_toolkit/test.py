@@ -44,20 +44,10 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
                 high = ldr_images[2].to(device)
                 hdr_pred = model(low, ref, high)
                 hdr_pred = hdr_pred.squeeze()
-                mu_pred = tonemap(hdr_pred, dataset=dataset)
+                mu_pred_to_write = tonemap(hdr_pred, dataset=dataset)
 
                 logger.info('elapsed time {}'.format(time.time() - start_time))
                 if dataset == 'kalantari':
-                    gt = data['gt'].squeeze().to(device)
-                    mu_gt = tonemap(gt)
-                    # psnr_l, psnr_t = psnr(hdr_pred, gt).cpu().numpy(), psnr(mu_pred, mu_gt).cpu().numpy()
-                    # calculation on GPU and on CPU may have difference
-                    psnr_l, psnr_t = \
-                        psnr(hdr_pred.permute(1, 2, 0).cpu().numpy(), gt.cpu().permute(1, 2, 0).numpy(), backend='np'), \
-                        psnr(mu_pred.cpu().numpy(), mu_gt.cpu().numpy(), backend='np')
-                    logger.info(f'psnr-l: {psnr_l} | psnr-t: {psnr_t}')
-                    scores_linear.append(psnr_l)
-                    scores_tonemap.append(psnr_t)
                     norm = np.percentile(hdr_pred.cpu().numpy().astype(np.float32), 99)
                     mu_pred_to_write = tanh_norm_mu_tonemap(hdr_pred, norm)
 
@@ -69,14 +59,7 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
                 else:
                     raise ValueError('invalid dataset')
                 writer.write_hdr(hdr_pred.permute(1, 2, 0).cpu().numpy(), img_id)
-                # writer.write_hdr(gt.permute(1, 2, 0).cpu().numpy(), f'{img_id}_gt')
                 writer.write_tonemap(mu_pred_to_write.permute(1, 2, 0).cpu().numpy(), img_id)
-                # test written image == hdr_pref
-                hdr_pred_reread = F.to_tensor(
-                    cv2.cvtColor(cv2.imread(str(curr_out_dir.joinpath(f'{img_id}.hdr')), cv2.IMREAD_UNCHANGED),
-                                 cv2.COLOR_BGR2RGB))
-                hdr_pred_reread.to(device)
-                print((hdr_pred_reread.squeeze() == hdr_pred).all())
                 if with_gt:
                     gt = data['gt'].to(device)
                     mu_gt = tonemap(gt, dataset=dataset)
