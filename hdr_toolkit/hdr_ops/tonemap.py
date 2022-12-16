@@ -2,9 +2,12 @@ import numpy as np
 import torch
 
 
-def tonemap(img, mu=5000., dataset='kalantari', gamma=2.24, percentile=99):
+def tonemap(img, mu=5000., dataset='kalantari', gamma=2.24, percentile=99, backend='torch'):
     if dataset == 'kalantari':
-        return torch.log(mu * img + 1) / np.log(1. + mu)
+        if backend == 'torch':
+            return torch.log(mu * img + 1) / np.log(1. + mu)
+        elif backend == 'np':
+            return np.log(mu * img + 1) / np.log(1. + mu)
     elif dataset == 'ntire':
         linear_img = img ** gamma
         norm_value = np.percentile(linear_img.data.cpu().numpy().astype(np.float32), percentile)
