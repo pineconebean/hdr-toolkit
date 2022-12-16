@@ -8,6 +8,8 @@ def tonemap(img, mu=5000., dataset='kalantari', gamma=2.24, percentile=99, backe
             return torch.log(mu * img + 1) / np.log(1. + mu)
         elif backend == 'np':
             return np.log(mu * img + 1) / np.log(1. + mu)
+        else:
+            raise ValueError(f'Invalid backend {backend}')
     elif dataset == 'ntire':
         linear_img = img ** gamma
         norm_value = np.percentile(linear_img.data.cpu().numpy().astype(np.float32), percentile)

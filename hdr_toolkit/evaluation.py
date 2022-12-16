@@ -29,7 +29,7 @@ def eval_kal(res_dir, ref_dir, out_dir):
         res_hdr_image = cv2.cvtColor(cv2.imread(res, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
 
         score_linear = psnr(ref_hdr_image, res_hdr_image, backend='np')
-        score_tonemap = psnr(tonemap(ref_hdr_image), tonemap(res_hdr_image), backend='np')
+        score_tonemap = psnr(tonemap(ref_hdr_image, backend='np'), tonemap(res_hdr_image, backend='np'), backend='np')
 
         scores_linear.append(score_linear)
         scores_tonemap.append(score_tonemap)
