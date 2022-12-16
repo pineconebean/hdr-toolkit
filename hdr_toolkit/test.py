@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 from data import get_dataset
 from data.writers import KalantariWriter, NTIREWriter
-from hdr_toolkit.hdr_ops.tonemap import tonemap
+from hdr_toolkit.hdr_ops.tonemap import tonemap, tanh_norm_mu_tonemap
 from hdr_toolkit.metrics.psnr import psnr
 from hdr_toolkit.networks import get_model
 from hdr_toolkit.util.logging import get_logger
@@ -49,22 +49,25 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
                     gt = data['gt'].squeeze().to(device)
                     mu_gt = tonemap(gt)
                     # psnr_l, psnr_t = psnr(hdr_pred, gt).cpu().numpy(), psnr(mu_pred, mu_gt).cpu().numpy()
+                    # calculation on GPU and on CPU may have difference
                     psnr_l, psnr_t = \
-                        psnr(hdr_pred.detach().cpu().numpy(), gt.detach().cpu().numpy(), backend='np'), \
-                        psnr(mu_pred.detach().cpu().numpy(), mu_gt.detach().cpu().numpy(), backend='np')
+                        psnr(hdr_pred.cpu().numpy(), gt.cpu().numpy(), backend='np'), \
+                        psnr(mu_pred.cpu().numpy(), mu_gt.cpu().numpy(), backend='np')
                     logger.info(f'psnr-l: {psnr_l} | psnr-t: {psnr_t}')
                     scores_linear.append(psnr_l)
                     scores_tonemap.append(psnr_t)
+                    norm = np.percentile(hdr_pred.cpu().numpy().astype(np.float32), 99)
+                    mu_pred_to_write = tanh_norm_mu_tonemap(hdr_pred, norm)
 
                 img_id = data['img_id']
                 if dataset == 'kalantari':
                     img_id = img_id[0]
                 elif dataset == 'ntire':
-                    img_id = img_id.detach().squeeze().cpu().numpy().astype(np.int32)
+                    img_id = img_id.squeeze().cpu().numpy().astype(np.int32)
                 else:
                     raise ValueError('invalid dataset')
-                writer.write_hdr(hdr_pred.permute(1, 2, 0).detach().cpu().numpy(), img_id)
-                writer.write_tonemap(mu_pred.permute(1, 2, 0).detach().cpu().numpy(), img_id)
+                writer.write_hdr(hdr_pred.permute(1, 2, 0).cpu().numpy(), img_id)
+                writer.write_tonemap(mu_pred_to_write.permute(1, 2, 0).cpu().numpy(), img_id)
                 if with_gt:
                     gt = data['gt'].to(device)
                     mu_gt = tonemap(gt, dataset=dataset)

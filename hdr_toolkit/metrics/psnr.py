@@ -7,8 +7,10 @@ from hdr_toolkit.hdr_ops.tonemap import tanh_norm_mu_tonemap
 def psnr(im0, im1, norm=1, backend='torch'):
     if backend == 'torch':
         return -10 * torch.log10(torch.mean(torch.pow(im0 / norm - im1 / norm, 2)))
-    else:
+    elif backend == 'np':
         return -10 * np.log10(np.mean(np.pow(im0 / norm - im1 / norm, 2)))
+    else:
+        raise ValueError(f'Invalid backend {backend}')
 
 
 def normalized_psnr(im0, im1, norm):
