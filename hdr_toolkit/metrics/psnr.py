@@ -4,8 +4,11 @@ import torch
 from hdr_toolkit.hdr_ops.tonemap import tanh_norm_mu_tonemap
 
 
-def psnr(im0, im1, norm=1):
-    return -10 * torch.log10(torch.mean(torch.pow(im0 / norm - im1 / norm, 2)))
+def psnr(im0, im1, norm=1, backend='torch'):
+    if backend == 'torch':
+        return -10 * torch.log10(torch.mean(torch.pow(im0 / norm - im1 / norm, 2)))
+    else:
+        return -10 * np.log10(np.mean(np.pow(im0 / norm - im1 / norm, 2)))
 
 
 def normalized_psnr(im0, im1, norm):

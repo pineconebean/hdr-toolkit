@@ -14,15 +14,15 @@ class KalantariDataset(Dataset):
     def __init__(self, img_dir, hdr_domain=True, exposure_aligned=False, suffix='gt.hdr', **_):
         super(KalantariDataset, self).__init__()
         self.suffix = suffix
-        self.ldr_images = list(map(str, Path(img_dir).glob(f'*{suffix}')))
+        self.gt_images = list(map(str, Path(img_dir).glob(f'*{suffix}')))
         self.exposure_aligned = exposure_aligned
         self.hdr_domain = hdr_domain
 
     def __len__(self):
-        return len(self.ldr_images)
+        return len(self.gt_images)
 
     def __getitem__(self, idx):
-        example_path = Path(self.ldr_images[idx])
+        example_path = Path(self.gt_images[idx])
         img_id = example_path.stem.split('_')[0]
 
         exposures = np.loadtxt(example_path.parent.joinpath(f'{img_id}_exposure.txt'))

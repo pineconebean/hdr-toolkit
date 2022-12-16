@@ -48,7 +48,10 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
                 if dataset == 'kalantari':
                     gt = data['gt'].squeeze().to(device)
                     mu_gt = tonemap(gt)
-                    psnr_l, psnr_t = psnr(hdr_pred, gt).cpu().numpy(), psnr(mu_pred, mu_gt).cpu().numpy()
+                    # psnr_l, psnr_t = psnr(hdr_pred, gt).cpu().numpy(), psnr(mu_pred, mu_gt).cpu().numpy()
+                    psnr_l, psnr_t = \
+                        psnr(hdr_pred.detach().cpu().numpy(), gt.detach().cpu().numpy(), backend='np'), \
+                        psnr(mu_pred.detach().cpu().numpy(), mu_gt.detach().cpu().numpy(), backend='np')
                     logger.info(f'psnr-l: {psnr_l} | psnr-t: {psnr_t}')
                     scores_linear.append(psnr_l)
                     scores_tonemap.append(psnr_t)

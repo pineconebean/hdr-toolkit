@@ -26,8 +26,10 @@ def eval_kal(res_dir, ref_dir, out_dir):
         logger.info(f'res: {res} | ref: {ref}')
 
         # todo: unify the usage of numpy and torch
-        ref_hdr_image = torch.from_numpy(cv2.cvtColor(cv2.imread(ref, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB))
-        res_hdr_image = torch.from_numpy(cv2.cvtColor(cv2.imread(res, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB))
+        ref_hdr_image = torch.from_numpy(
+            cv2.cvtColor(cv2.imread(ref, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)).permute(2, 0, 1)
+        res_hdr_image = torch.from_numpy(
+            cv2.cvtColor(cv2.imread(res, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)).permute(2, 0, 1)
 
         score_linear = psnr(ref_hdr_image, res_hdr_image)
         score_tonemap = psnr(tonemap(ref_hdr_image), tonemap(res_hdr_image))
