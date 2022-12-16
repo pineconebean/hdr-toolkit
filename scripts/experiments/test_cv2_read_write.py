@@ -31,7 +31,7 @@ tensor_from_numpy = torch.from_numpy(read_img)
 tensor_rgb_file_path = target_dir.joinpath('tensor_bgr_result.hdr')
 print(tensor_rgb_read_img.shape)
 cv2.imwrite(str(tensor_rgb_file_path),
-            cv2.cvtColor(tensor_rgb_read_img.permute(1, 2, 0).detach().cpu().numpy(), cv2.COLOR_RGB2BGR))
+            cv2.cvtColor(tensor_rgb_read_img.permute(1, 2, 0).cpu().numpy(), cv2.COLOR_RGB2BGR))
 re_tensor_rgb_img = cv2.imread(str(tensor_rgb_file_path), cv2.IMREAD_UNCHANGED)
 # noinspection PyUnresolvedReferences
 print(f'Test 3: {(read_img == re_tensor_rgb_img).all()}')
@@ -49,3 +49,8 @@ ref_hdr_image = F.to_tensor(cv2.cvtColor(cv2.imread(ref, cv2.IMREAD_UNCHANGED), 
 res_hdr_image = F.to_tensor(cv2.cvtColor(cv2.imread(res, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB))
 score_linear2 = psnr(ref_hdr_image, res_hdr_image)
 print(f'Test 5: {score_linear1 == score_linear2}')
+
+# Test whether dataloader will change the data of groundtruth
+gt = cv2.imread(r'/Users/jundaliao/Documents/HDR/Kalantari/Test2/001_gt.hdr', cv2.IMREAD_UNCHANGED)
+loader_gt = cv2.imread(r'/Users/jundaliao/Documents/HDR/Kalantari/test_cv2/001_gt.hdr', cv2.IMREAD_UNCHANGED)
+print(f'Test6: {(gt == loader_gt).all()}')
