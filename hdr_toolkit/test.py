@@ -5,8 +5,10 @@ import time
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+import cv2
+import torchvision.transforms.functional as F
 
-from data import get_dataset
+from data import get_dataset, read_ldr
 from data.writers import KalantariWriter, NTIREWriter
 from hdr_toolkit.hdr_ops.tonemap import tonemap, tanh_norm_mu_tonemap
 from hdr_toolkit.metrics.psnr import psnr
@@ -69,6 +71,11 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
                 writer.write_hdr(hdr_pred.permute(1, 2, 0).cpu().numpy(), img_id)
                 # writer.write_hdr(gt.permute(1, 2, 0).cpu().numpy(), f'{img_id}_gt')
                 writer.write_tonemap(mu_pred_to_write.permute(1, 2, 0).cpu().numpy(), img_id)
+                # test written image == hdr_pref
+                hdr_pred_reread = F.to_tensor(
+                    cv2.cvtColor(cv2.imread(str(curr_out_dir.joinpath(f'{img_id}.hdr')), cv2.IMREAD_UNCHANGED),
+                                 cv2.COLOR_BGR2RGB))
+                print((hdr_pred_reread.squeeze() == hdr_pred).all())
                 if with_gt:
                     gt = data['gt'].to(device)
                     mu_gt = tonemap(gt, dataset=dataset)
