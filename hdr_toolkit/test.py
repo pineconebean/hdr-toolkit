@@ -75,6 +75,7 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
                 hdr_pred_reread = F.to_tensor(
                     cv2.cvtColor(cv2.imread(str(curr_out_dir.joinpath(f'{img_id}.hdr')), cv2.IMREAD_UNCHANGED),
                                  cv2.COLOR_BGR2RGB))
+                hdr_pred_reread.to(device)
                 print((hdr_pred_reread.squeeze() == hdr_pred).all())
                 if with_gt:
                     gt = data['gt'].to(device)
