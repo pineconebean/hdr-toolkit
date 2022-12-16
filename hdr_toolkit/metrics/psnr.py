@@ -8,7 +8,7 @@ def psnr(im0, im1, norm=1, backend='torch'):
     if backend == 'torch':
         return -10 * torch.log10(torch.mean(torch.pow(im0 / norm - im1 / norm, 2)))
     elif backend == 'np':
-        return -10 * np.log10(np.mean(np.pow(im0 / norm - im1 / norm, 2)))
+        return -10 * np.log10(np.mean(np.power(im0 / norm - im1 / norm, 2)))
     else:
         raise ValueError(f'Invalid backend {backend}')
 
