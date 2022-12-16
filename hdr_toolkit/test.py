@@ -67,6 +67,7 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
                 else:
                     raise ValueError('invalid dataset')
                 writer.write_hdr(hdr_pred.permute(1, 2, 0).cpu().numpy(), img_id)
+                writer.write_hdr(gt.permute(1, 2, 0).cpu().numpy(), f'{img_id}_gt')
                 writer.write_tonemap(mu_pred_to_write.permute(1, 2, 0).cpu().numpy(), img_id)
                 if with_gt:
                     gt = data['gt'].to(device)
