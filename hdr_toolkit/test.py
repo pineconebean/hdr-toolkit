@@ -28,8 +28,8 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
         model.load_state_dict(ckpt['model'])
         model.eval()
         model.to(device)
-        dataset = get_dataset(dataset, input_dir, with_gt=with_gt, exposure_aligned=use_ea, hdr_domain=not use_ea)
-        data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
+        data_to_load = get_dataset(dataset, input_dir, with_gt=with_gt, exposure_aligned=use_ea, hdr_domain=not use_ea)
+        data_loader = DataLoader(data_to_load, batch_size=1, shuffle=False)
 
         curr_out_dir = out_dir.joinpath(out_dir_name)
         writer = NTIREWriter(curr_out_dir) if dataset == 'ntire' else KalantariWriter(curr_out_dir)

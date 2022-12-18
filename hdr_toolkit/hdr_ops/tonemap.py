@@ -21,7 +21,7 @@ def tonemap(img, mu=5000., dataset='kalantari', gamma=2.24, percentile=99, backe
             # cpu_img = linear_img.data.cpu().numpy().astype(np.float32)
         return result
     else:
-        raise ValueError('Invalid dataset type')
+        raise ValueError(f'Invalid dataset type {dataset}')
 
 
 def tanh_norm_mu_tonemap(hdr_image, norm_value, mu=5000):
