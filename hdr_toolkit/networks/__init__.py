@@ -14,6 +14,8 @@ def get_model(model_type, out_activation='relu'):
         model = ECADNet(n_channels=64, trans_conv_groups=6, out_activation=out_activation, use_trans=False)
     elif model_type == 'psftd':
         model = PSFTDNet(out_activation=out_activation)
+    elif model_type == 'psftd-share':
+        model = PSFTDNet(share_offsets=True, out_activation=out_activation)
     elif model_type == 'ba-default':
         model = BAHDRNet(n_channels=64, out_activation=out_activation)
     elif model_type == 'res-ref-ahdr':

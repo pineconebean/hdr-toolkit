@@ -33,8 +33,6 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
         curr_out_dir = out_dir.joinpath(out_dir_name)
         writer = NTIREWriter(curr_out_dir) if dataset == 'ntire' else KalantariWriter(curr_out_dir)
         logger = get_logger(out_dir_name, str(curr_out_dir.joinpath('test.log')))
-        scores_linear = []
-        scores_tonemap = []
         with torch.no_grad():
             for batch, data in enumerate(data_loader):
                 start_time = time.time()
@@ -65,8 +63,6 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
                     mu_gt = tonemap(gt, dataset=dataset)
                     if write_tonemap_gt:
                         writer.write_mu_gt(mu_gt.squeeze().permute(1, 2, 0).detach().cpu().numpy(), img_id)
-        logger.info(f'avg psnr-t: {np.mean(scores_tonemap)}')
-        logger.info(f'avg psnr-l: {np.mean(scores_linear)}')
 
 
 if __name__ == '__main__':
