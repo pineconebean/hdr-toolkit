@@ -13,9 +13,10 @@ from hdr_toolkit.networks import get_model
 from hdr_toolkit.util.logging import get_logger
 
 
-def _get_data_set(name, path, batch_size=4, two_level_dir=False):
+def _get_data_set(name, path, batch_size=4, two_level_dir=False, use_ea=False):
     if name == 'kalantari':
-        return DataLoader(KalantariDataset(path), batch_size=batch_size, shuffle=True)
+        return DataLoader(KalantariDataset(path, exposure_aligned=use_ea, hdr_domain=not use_ea),
+                          batch_size=batch_size, shuffle=True)
     elif name == 'ntire':
         return DataLoader(NTIREDataset(path, two_level_dir=two_level_dir), batch_size=batch_size, shuffle=True)
     else:
@@ -41,9 +42,9 @@ def _save_model(model, optimizer, epoch, save_path, val_scores=None):
 
 
 def train(model, epochs, batch_size, data_path, val_data_path, dataset, save_dir, log_path, logger_name,
-          learning_rate=1e-4, loss_type='mse', two_level_dir=False, use_cpu=False, val_interval=1000):
-    data = _get_data_set(dataset, data_path, batch_size=batch_size, two_level_dir=two_level_dir)
-    val_data = _get_data_set(dataset, val_data_path, batch_size=batch_size)
+          learning_rate=1e-4, loss_type='mse', two_level_dir=False, use_cpu=False, val_interval=1000, use_ea=False):
+    data = _get_data_set(dataset, data_path, batch_size=batch_size, two_level_dir=two_level_dir, use_ea=use_ea)
+    val_data = _get_data_set(dataset, val_data_path, batch_size=batch_size, use_ea=use_ea)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     trained_epochs = 0
     best_val_scores = (0., 0.)  # psnr-l, psnr-t
@@ -184,6 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', dest='batch_size', type=int, default=4)
     parser.add_argument('--two-level-dir', dest='two_l_dir', action='store_true')
     parser.add_argument('--cpu', dest='cpu', action='store_true')
+    parser.add_argument('--ea', dest='ea', action='store_true')
     args = parser.parse_args()
 
     train(model=get_model(args.model, out_activation=args.activation),
@@ -198,4 +200,5 @@ if __name__ == '__main__':
           loss_type=args.loss,
           two_level_dir=args.two_l_dir,
           use_cpu=args.cpu,
-          val_interval=args.val_interval)
+          val_interval=args.val_interval,
+          use_ea=args.ea)

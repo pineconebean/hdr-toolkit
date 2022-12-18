@@ -16,7 +16,7 @@ from hdr_toolkit.networks import get_model
 from hdr_toolkit.util.logging import get_logger
 
 
-def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonemap_gt, with_gt, act):
+def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonemap_gt, with_gt, act, use_ea):
     out_dir = pathlib.Path(out_dir)
     ckpt_dir = pathlib.Path(ckpt_dir)
     ckpt_files = ['ckpt.pth', 'val-t-ckpt.pth', 'val-l-ckpt.pth']
@@ -28,7 +28,8 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
         model.load_state_dict(ckpt['model'])
         model.eval()
         model.to(device)
-        data_loader = DataLoader(get_dataset(dataset, input_dir, with_gt=with_gt), batch_size=1, shuffle=False)
+        dataset = get_dataset(dataset, input_dir, with_gt=with_gt, exposure_aligned=use_ea, hdr_domain=not use_ea)
+        data_loader = DataLoader(dataset, batch_size=1, shuffle=False)
 
         curr_out_dir = out_dir.joinpath(out_dir_name)
         writer = NTIREWriter(curr_out_dir) if dataset == 'ntire' else KalantariWriter(curr_out_dir)
@@ -76,8 +77,9 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir', dest='out_dir', required=True)
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--write-tonemap-gt', dest='t_gt', action='store_true')
+    parser.add_argument('--ea', dest='ea', action='store_true')
     parser.add_argument('--out-activation', dest='act', choices=['relu', 'sigmoid'], required=True)
     args = parser.parse_args()
 
     test(args.model, args.checkpoint, args.data, args.input_dir, args.out_dir, args.device, args.t_gt, args.with_gt,
-         args.act)
+         args.act, args.ea)
