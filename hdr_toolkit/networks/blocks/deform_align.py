@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch import nn
 from torchvision.ops import DeformConv2d
 
-from hdr_toolkit.networks.blocks import flow_warp
+from .flow.spynet import flow_warp
 
 
 class FlowGuidedDA(nn.Module):
