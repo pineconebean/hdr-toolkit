@@ -7,7 +7,7 @@ from hdr_toolkit.networks.blocks import PCDAlign, AHDRMergingNet, SpatialAttenti
 # ref: https://github.com/liuzhen03/ADNet/blob/main/DCNv2/dcn_v2.py
 class ADNet(nn.Module):
 
-    def __init__(self, n_channels, n_dense_layers, growth_rate, out_activation='relu'):
+    def __init__(self, n_channels, n_dense_layers, growth_rate, out_activation='relu', conv_groups=8, offset_groups=8):
         super(ADNet, self).__init__()
         self.n_dense_layer = n_dense_layers
         self.n_channels = n_channels
@@ -15,7 +15,7 @@ class ADNet(nn.Module):
 
         # PCD align module
         self.pyramid_feats = PyramidFeature(in_channels=3, n_channels=n_channels)
-        self.align_module = PCDAlign(n_channels)
+        self.align_module = PCDAlign(n_channels, groups=conv_groups, offset_groups=offset_groups)
 
         # Spatial attention module
         self.att_short_mid = SpatialAttention(n_channels)

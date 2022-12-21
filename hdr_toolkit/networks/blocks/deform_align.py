@@ -3,6 +3,78 @@ import torch.nn.functional as F
 from torch import nn
 from torchvision.ops import DeformConv2d
 
+from hdr_toolkit.networks.blocks import flow_warp
+
+
+class FlowGuidedDA(nn.Module):
+    """FLow guided deformable alignment from BasicVSR++"""
+
+    def __init__(self, n_channels, single_feat_groups=8, max_residue_magnitude=10,
+                 double_non_ref=False):
+        super(FlowGuidedDA, self).__init__()
+
+        self.max_residue_magnitude = max_residue_magnitude
+        self.double_non_ref = double_non_ref
+        self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
+
+        in_channels_ = 3 * n_channels + 4 if double_non_ref else 3 * n_channels + 2
+        self.offset_conv = nn.Sequential(
+            nn.Conv2d(in_channels_, 3, 1, 1),
+            self.leaky_relu,
+            nn.Conv2d(n_channels, n_channels, 3, 1, 1),
+            self.leaky_relu,
+            nn.Conv2d(n_channels, n_channels, 3, 1, 1),
+            self.leaky_relu,
+            nn.Conv2d(n_channels, 27 * single_feat_groups, 3, 1, 1),
+        )
+        self.init_offset()
+        groups_ = single_feat_groups * 2 if double_non_ref else single_feat_groups
+        self.deform_conv = DeformConv2d(n_channels, n_channels, 3, 1, 1, 1, groups_)
+
+        # Cascading DCN
+        self.cas_offset_conv1 = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for diff
+        self.cas_offset_conv2 = nn.Conv2d(n_channels, n_channels, 3, 1, 1, bias=True)
+        self.cas_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1,
+                                               groups=single_feat_groups)
+
+    def init_offset(self):
+        nn.init.zeros_(self.offset_conv[-1].weight)
+        nn.init.zeros_(self.offset_conv[-1].data)
+
+    def forward(self, non_ref, ref, flow):
+        if self.double_non_ref:
+            return self._align_double(non_ref[0], non_ref[1], ref, flow[0], flow[1])
+        else:
+            return self._align_single(non_ref, ref, flow)
+
+    def _align_double(self, non_ref_1, non_ref_2, ref, flow_1, flow_2):
+        warped_non_ref_1 = flow_warp(non_ref_1, flow_1)
+        warped_non_ref_2 = flow_warp(non_ref_2, flow_2)
+
+        offset_feat = torch.cat((warped_non_ref_1, ref, warped_non_ref_2, flow_1, flow_2), dim=1)
+        o1, o2, mask = torch.chunk(self.offset_conv(offset_feat), 3, dim=1)
+        offset = self.max_residue_magnitude * torch.tanh(torch.cat((o1, o2), dim=1))
+        offset_1, offset_2 = torch.chunk(offset, 2, dim=1)
+        # Here flip() is used because optical flow output by SPyNet [:,0,:,:] is for width direction, while DeformConv
+        # offsets [:,0,:,:] should be height direction
+        offset_1 = offset_1 + flow_1.flip(1).repeat(1, offset_1.size(1) // 2, 1, 1)
+        offset_2 = offset_2 + flow_2.flip(1).repeat(1, offset_2.size(1) // 2, 1, 1)
+        offset = torch.cat([offset_1, offset_2], dim=1)
+        # mask
+        mask = torch.sigmoid(mask)
+
+        feat_to_align = torch.cat((non_ref_1, non_ref_2), dim=1)
+        return self.deform_conv2d(feat_to_align, offset=offset, mask=mask)
+
+    def _align_single(self, non_ref, ref, flow):
+        warped_non_ref = flow_warp(non_ref, flow)
+        offset_feat = torch.cat((warped_non_ref, ref, flow), dim=1)
+        o1, o2, mask = torch.chunk(self.offset_conv(offset_feat), 3, dim=1)
+        offset = self.max_residue_magnitude * torch.tanh(torch.cat((o1, o2), dim=1))
+        offset = offset + flow.flip(1).repeat(1, offset.size(1) // 2, 1, 1)
+        mask = torch.sigmoid(mask)
+        return self.deform_conv(non_ref, offset=offset, mask=mask)
+
 
 class VanillaDA(nn.Module):
 
@@ -27,25 +99,28 @@ class VanillaDA(nn.Module):
 
 class PCDAlign(nn.Module):
 
-    def __init__(self, n_channels=64, groups=8):
+    def __init__(self, n_channels=64, groups=8, offset_groups=8):
         super(PCDAlign, self).__init__()
         # L3: level 3, 1/4 spatial size
         self.l3_offset_conv1 = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for diff
         self.l3_offset_conv2 = nn.Conv2d(n_channels, n_channels, 3, 1, 1, bias=True)
-        self.l3_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1, groups=groups)
+        self.l3_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1, groups=groups,
+                                              offset_groups=offset_groups)
 
         # L2: level 2, 1/2 spatial size
         self.l2_offset_conv1 = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for diff
         self.l2_offset_conv2 = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for offset
         self.l2_offset_conv3 = nn.Conv2d(n_channels, n_channels, 3, 1, 1, bias=True)
-        self.l2_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1, groups=groups)
+        self.l2_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1, groups=groups,
+                                              offset_groups=offset_groups)
 
         self.l2_fea_conv = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for fea
         # L1: level 1, original spatial size
         self.l1_offset_conv1 = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for diff
         self.l1_offset_conv2 = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for offset
         self.l1_offset_conv3 = nn.Conv2d(n_channels, n_channels, 3, 1, 1, bias=True)
-        self.l1_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1, groups=groups)
+        self.l1_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1, groups=groups,
+                                              offset_groups=offset_groups)
 
         self.l1_fea_conv = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for fea
         # Cascading DCN
@@ -53,7 +128,7 @@ class PCDAlign(nn.Module):
         self.cas_offset_conv2 = nn.Conv2d(n_channels, n_channels, 3, 1, 1, bias=True)
 
         self.cas_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1,
-                                               groups=groups)
+                                               groups=groups, offset_groups=offset_groups)
 
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
@@ -212,10 +287,10 @@ class PCDDeformConv2d(nn.Module):
     """Use other features to generate offsets and masks"""
 
     def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation=1,
-                 groups=1):
+                 groups=1, offset_groups=8):
         super(PCDDeformConv2d, self).__init__()
 
-        channels_ = groups * 3 * kernel_size * kernel_size
+        channels_ = offset_groups * 3 * kernel_size * kernel_size
         self.conv_offset_mask = nn.Conv2d(in_channels, channels_, kernel_size=kernel_size,
                                           stride=stride, padding=padding, bias=True)
         self.init_offset()
@@ -223,8 +298,8 @@ class PCDDeformConv2d(nn.Module):
                                         padding, dilation, groups)
 
     def init_offset(self):
-        self.conv_offset_mask.weight.data.zero_()
-        self.conv_offset_mask.bias.data.zero_()
+        nn.init.zeros_(self.conv_offset_mask.weight)
+        nn.init.zeros_(self.conv_offset_mask.bias)
 
     def forward(self, in_fea, offset_fea):
         """

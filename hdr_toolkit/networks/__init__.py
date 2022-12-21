@@ -8,6 +8,8 @@ def get_model(model_type, out_activation='relu'):
         model = AHDRNet(n_channels=64, out_activation=out_activation)
     elif model_type == 'adnet':
         model = ADNet(n_channels=64, n_dense_layers=3, growth_rate=32, out_activation=out_activation)
+    elif model_type == 'adnet-group1':
+        model = ADNet(n_channels=64, n_dense_layers=3, growth_rate=32, out_activation=out_activation, conv_groups=1)
     elif model_type == 'ecadnet-gc6':
         model = ECADNet(n_channels=64, trans_conv_groups=6, out_activation=out_activation)
     elif model_type == 'ecadnet':
