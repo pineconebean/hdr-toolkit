@@ -9,7 +9,7 @@ from .flow.spynet import flow_warp
 class FlowGuidedDA(nn.Module):
     """FLow guided deformable alignment from BasicVSR++"""
 
-    def __init__(self, n_channels, single_feat_groups=8, max_residue_magnitude=10,
+    def __init__(self, n_channels, conv_groups=1, offset_groups=8, max_residue_magnitude=20,
                  double_non_ref=False):
         super(FlowGuidedDA, self).__init__()
 
@@ -17,45 +17,51 @@ class FlowGuidedDA(nn.Module):
         self.double_non_ref = double_non_ref
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
-        in_channels_ = 3 * n_channels + 4 if double_non_ref else 3 * n_channels + 2
+        in_channels_ = 3 * n_channels + 4 if double_non_ref else 2 * n_channels + 2
+        groups_ = offset_groups * 2 if double_non_ref else offset_groups
         self.offset_conv = nn.Sequential(
-            nn.Conv2d(in_channels_, 3, 1, 1),
+            nn.Conv2d(in_channels_, n_channels, 3, 1, 1),
             self.leaky_relu,
             nn.Conv2d(n_channels, n_channels, 3, 1, 1),
             self.leaky_relu,
             nn.Conv2d(n_channels, n_channels, 3, 1, 1),
             self.leaky_relu,
-            nn.Conv2d(n_channels, 27 * single_feat_groups, 3, 1, 1),
+            nn.Conv2d(n_channels, 27 * groups_, 3, 1, 1),
         )
         self.init_offset()
-        groups_ = single_feat_groups * 2 if double_non_ref else single_feat_groups
-        self.deform_conv = DeformConv2d(n_channels, n_channels, 3, 1, 1, 1, groups_)
+        self.deform_conv = DeformConv2d(n_channels, n_channels, 3, 1, 1, 1, conv_groups)
 
         # Cascading DCN
         self.cas_offset_conv1 = nn.Conv2d(n_channels * 2, n_channels, 3, 1, 1, bias=True)  # concat for diff
         self.cas_offset_conv2 = nn.Conv2d(n_channels, n_channels, 3, 1, 1, bias=True)
         self.cas_deform_conv = PCDDeformConv2d(n_channels, n_channels, 3, stride=1, padding=1, dilation=1,
-                                               groups=single_feat_groups)
+                                               offset_groups=offset_groups)
 
     def init_offset(self):
         nn.init.zeros_(self.offset_conv[-1].weight)
-        nn.init.zeros_(self.offset_conv[-1].data)
+        nn.init.zeros_(self.offset_conv[-1].bias)
 
     def forward(self, non_ref, ref, flow):
         if self.double_non_ref:
-            return self._align_double(non_ref[0], non_ref[1], ref, flow[0], flow[1])
+            feat = self._align_double(non_ref[0], non_ref[1], ref, flow[0], flow[1])
         else:
-            return self._align_single(non_ref, ref, flow)
+            feat = self._align_single(non_ref, ref, flow)
+
+        # align feat with cascaded deformable convolution
+        offset_feat = torch.cat((feat, ref), dim=1)
+        offset_feat = self.leaky_relu(self.cas_offset_conv1(offset_feat))
+        offset_feat = self.leaky_relu(self.cas_offset_conv2(offset_feat))
+        return self.cas_deform_conv(feat, offset_feat)
 
     def _align_double(self, non_ref_1, non_ref_2, ref, flow_1, flow_2):
-        warped_non_ref_1 = flow_warp(non_ref_1, flow_1)
-        warped_non_ref_2 = flow_warp(non_ref_2, flow_2)
+        warped_non_ref_1 = flow_warp(non_ref_1, flow_1.permute(0, 2, 3, 1))
+        warped_non_ref_2 = flow_warp(non_ref_2, flow_2.permute(0, 2, 3, 1))
 
         offset_feat = torch.cat((warped_non_ref_1, ref, warped_non_ref_2, flow_1, flow_2), dim=1)
         o1, o2, mask = torch.chunk(self.offset_conv(offset_feat), 3, dim=1)
         offset = self.max_residue_magnitude * torch.tanh(torch.cat((o1, o2), dim=1))
         offset_1, offset_2 = torch.chunk(offset, 2, dim=1)
-        # Here flip() is used because optical flow output by SPyNet [:,0,:,:] is for width direction, while DeformConv
+        # Here flip() is used because opti cal flow output by SPyNet [:,0,:,:] is for width direction, while DeformConv
         # offsets [:,0,:,:] should be height direction
         offset_1 = offset_1 + flow_1.flip(1).repeat(1, offset_1.size(1) // 2, 1, 1)
         offset_2 = offset_2 + flow_2.flip(1).repeat(1, offset_2.size(1) // 2, 1, 1)
@@ -67,7 +73,7 @@ class FlowGuidedDA(nn.Module):
         return self.deform_conv2d(feat_to_align, offset=offset, mask=mask)
 
     def _align_single(self, non_ref, ref, flow):
-        warped_non_ref = flow_warp(non_ref, flow)
+        warped_non_ref = flow_warp(non_ref, flow.permute(0, 2, 3, 1))
         offset_feat = torch.cat((warped_non_ref, ref, flow), dim=1)
         o1, o2, mask = torch.chunk(self.offset_conv(offset_feat), 3, dim=1)
         offset = self.max_residue_magnitude * torch.tanh(torch.cat((o1, o2), dim=1))

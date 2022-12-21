@@ -47,7 +47,7 @@ def optical_flow_for_img(img_dir, img_id, target, adjust_direction, scale_factor
     else:
         raise ValueError(f'Invalid adjust direction {adjust_direction} (choose one from `up`, `down` and `middle`')
 
-    spy_net = SpyNet('../models/spy_net/ckpt.pth')
+    spy_net = SpyNet('../../models/spy_net/ckpt.pth')
 
     out_dir = Path(f'../models/spy_net/flow_images/{img_id}/')
     out_dir.mkdir(exist_ok=True, parents=True)
@@ -83,7 +83,7 @@ def visualize_optical_flow():
         ea_medium_half = F.interpolate(ea_medium, scale_factor=0.25, mode='bicubic')
         ea_short_half = F.interpolate(ea_short, scale_factor=0.25, mode='bicubic')
 
-        spy_net = SpyNet('../models/spy_net/ckpt.pth')
+        spy_net = SpyNet('../../models/spy_net/ckpt.pth')
         # ea_sm_flow = spy_net(ea_medium, ea_short).squeeze().permute(1, 2, 0).numpy()
         # ga_sm_flow = spy_net(ga_medium, ga_short).squeeze().permute(1, 2, 0).numpy()
         adjusted_sm_flow = spy_net(medium.unsqueeze(0), m_short).squeeze().permute(1, 2, 0).numpy()

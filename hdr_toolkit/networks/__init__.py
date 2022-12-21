@@ -1,6 +1,6 @@
 from hdr_toolkit.networks.adnet import ADNet
 from hdr_toolkit.networks.ahdrnet import AHDRNet
-from hdr_toolkit.networks.experimental import ECADNet, PSFTDNet, BAHDRNet, ResRefAHDR, ResRefSFTNet, ResRefDANet
+from hdr_toolkit.networks.experimental import ECADNet, PSFTDNet, BAHDRNet, ResRefAHDR, ResRefSFTNet, ResRefDANet, FDANet
 
 
 def get_model(model_type, out_activation='relu'):
