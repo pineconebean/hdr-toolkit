@@ -11,7 +11,6 @@ class FDANet(nn.Module):
         self.flow_net = SpyNet(flow_net_load_path)
         self.align_together = align_together
         self.fda = FlowGuidedDA(n_channels, double_non_ref=align_together)
-        self.fda.requires_grad_(False)
 
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
 
@@ -58,7 +57,7 @@ class FDANet(nn.Module):
         ldr_feat_l = self.ldr_feat_extract(ldr_long)
 
         att_feat_s = self.att_short_mid(ldr_feat_s, ldr_feat_m)
-        att_feat_l = self.att_short_mid(ldr_feat_l, ldr_feat_m)
+        att_feat_l = self.att_long_mid(ldr_feat_l, ldr_feat_m)
 
         merged_feat = torch.cat((merged_feat, att_feat_s, ldr_feat_m, att_feat_l), dim=1)
         return self.merging(merged_feat, ea_feat_m)

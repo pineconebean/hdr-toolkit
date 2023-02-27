@@ -3,6 +3,7 @@ import pathlib
 
 import torch
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import MultiStepLR
 
 from data.kalantari import KalantariDataset
 from data.ntire import NTIREDataset
@@ -186,6 +187,7 @@ if __name__ == '__main__':
     parser.add_argument('--two-level-dir', dest='two_l_dir', action='store_true')
     parser.add_argument('--cpu', dest='cpu', action='store_true')
     parser.add_argument('--ea', dest='ea', action='store_true')
+    parser.add_argument('--lr', dest='lr', type=float, default=1e-4)
     args = parser.parse_args()
 
     train(model=get_model(args.model, out_activation=args.activation),
@@ -201,4 +203,5 @@ if __name__ == '__main__':
           two_level_dir=args.two_l_dir,
           use_cpu=args.cpu,
           val_interval=args.val_interval,
-          use_ea=args.ea)
+          use_ea=args.ea,
+          learning_rate=args.lr)

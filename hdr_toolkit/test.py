@@ -16,11 +16,15 @@ from hdr_toolkit.networks import get_model
 from hdr_toolkit.util.logging import get_logger
 
 
-def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonemap_gt, with_gt, act, use_ea):
+def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonemap_gt,
+         with_gt, act, use_ea, validation=False):
     out_dir = pathlib.Path(out_dir)
     ckpt_dir = pathlib.Path(ckpt_dir)
-    ckpt_files = ['ckpt.pth', 'val-t-ckpt.pth', 'val-l-ckpt.pth']
-    out_dir_names = ['last', 'val-t', 'val-l']
+    ckpt_files = ['ckpt.pth']
+    out_dir_names = ['last']
+    if validation:
+        ckpt_files = ckpt_files.extend(['val-t-ckpt.pth', 'val-l-ckpt.pth'])
+        out_dir_names = out_dir_names.extend(['val-t', 'val-l'])
 
     for curr_file, out_dir_name in zip(ckpt_files, out_dir_names):
         ckpt = torch.load(str(ckpt_dir.joinpath(curr_file)))
@@ -79,7 +83,8 @@ if __name__ == '__main__':
     parser.add_argument('--write-tonemap-gt', dest='t_gt', action='store_true')
     parser.add_argument('--ea', dest='ea', action='store_true')
     parser.add_argument('--out-activation', dest='act', choices=['relu', 'sigmoid'], required=True)
+    parser.add_argument('--validation', dest='validation', action='store_true')
     args = parser.parse_args()
 
     test(args.model, args.checkpoint, args.data, args.input_dir, args.out_dir, args.device, args.t_gt, args.with_gt,
-         args.act, args.ea)
+         args.act, args.ea, args.validation)
