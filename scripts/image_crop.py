@@ -3,13 +3,18 @@ from pathlib import Path
 import argparse
 
 
+# Kalantari 009 y:1092 x:448 size: 75
+# Kalantari 009 y:1019 x:466 size: 75
+# Kalantari 010 y:779 x:535 size: 75
+# Kalantari 010 y:473 x:649 size: 75
 def crop_image(input_dir, output_dir, x, y, size):
-    images = Path(input_dir).glob('*.tif')
+    images = Path(input_dir).glob('*')
     for curr in images:
-        img = cv2.imread(str(curr), cv2.IMREAD_UNCHANGED)
-        print(str(curr))
-        cropped = img[x:x + size, y:y + size, :]
-        cv2.imwrite(str(Path(output_dir).joinpath(curr.name)), cropped)
+        if curr.suffix in ['.hdr', '.tif']:
+            img = cv2.imread(str(curr), cv2.IMREAD_UNCHANGED)
+            print(str(curr))
+            cropped = img[x:x + size, y:y + size, :]
+            cv2.imwrite(str(Path(output_dir).joinpath(curr.name)), cropped)
 
 
 if __name__ == '__main__':

@@ -3,7 +3,6 @@ import pathlib
 
 import torch
 from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import MultiStepLR
 
 from data.kalantari import KalantariDataset
 from data.ntire import NTIREDataset

@@ -1,8 +1,9 @@
-import torch
 import torch.nn as nn
 from torch import cat
+
 from hdr_toolkit.networks.blocks import (HomoPyramidFeature, AHDRMergingNet, PyramidSFT, PCDAlign,
                                          HeteroPyramidFeature, NaivePyramidSFT, SharedOffsetsPCD)
+from hdr_toolkit.networks.blocks.attention import MultiSpectralAttentionLayer
 
 
 class PSFTDNet(nn.Module):
@@ -16,7 +17,8 @@ class PSFTDNet(nn.Module):
                  same_conv_for_pyramid=True,
                  naive_pyramid_sft=True,
                  sft_learn_residual=False,
-                 simple_sft=True):
+                 simple_sft=True,
+                 fs=False):
         super(PSFTDNet, self).__init__()
 
         self.extract_same_feat = extract_same_feat
@@ -46,6 +48,9 @@ class PSFTDNet(nn.Module):
             self.psft_sm = PyramidSFT(n_channels, simple_sft=simple_sft, sft_learn_residual=sft_learn_residual)
             self.psft_lm = PyramidSFT(n_channels, simple_sft=simple_sft, sft_learn_residual=sft_learn_residual)
 
+        self.fs = fs
+        if fs:
+            self.fea_select = MultiSpectralAttentionLayer(n_channels * 6, 56, 56)
         # merging network
         self.merging = AHDRMergingNet(n_channels * 6, n_channels, out_activation)
         self.leaky_relu = nn.LeakyReLU(negative_slope=0.1, inplace=True)
@@ -72,6 +77,9 @@ class PSFTDNet(nn.Module):
 
         cat_feat = cat((aligned_feat_s, aligned_feat_m, aligned_feat_l,
                         sft_feat_s, sft_feat_m, sft_feat_l), dim=1)
+
+        if self.fs:
+            cat_feat = self.fea_select(cat_feat)
         return self.merging(cat_feat, aligned_feat_m)
 
     def _generate_feature(self, short, mid, long):
