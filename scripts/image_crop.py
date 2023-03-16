@@ -3,6 +3,8 @@ from pathlib import Path
 import argparse
 
 
+# Kalantari 008 y:647 x:267 size: 150
+# Kalantari 008 y:319 x:537 size: 150
 # Kalantari 009 y:1092 x:448 size: 75
 # Kalantari 009 y:1019 x:466 size: 75
 # Kalantari 010 y:779 x:535 size: 75
