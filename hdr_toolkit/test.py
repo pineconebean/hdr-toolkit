@@ -5,13 +5,10 @@ import time
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-import cv2
-import torchvision.transforms.functional as F
 
-from data import get_dataset, read_ldr
+from data import get_dataset
 from data.writers import KalantariWriter, NTIREWriter
 from hdr_toolkit.hdr_ops.tonemap import tonemap, tanh_norm_mu_tonemap
-from hdr_toolkit.metrics.psnr import psnr
 from hdr_toolkit.networks import get_model
 from hdr_toolkit.util.logging import get_logger
 
@@ -23,8 +20,8 @@ def test(model_type, ckpt_dir, dataset, input_dir, out_dir, device, write_tonema
     ckpt_files = ['ckpt.pth']
     out_dir_names = ['last']
     if validation:
-        ckpt_files = ckpt_files.extend(['val-t-ckpt.pth', 'val-l-ckpt.pth'])
-        out_dir_names = out_dir_names.extend(['val-t', 'val-l'])
+        ckpt_files.extend(['val-t-ckpt.pth', 'val-l-ckpt.pth'])
+        out_dir_names.extend(['val-t', 'val-l'])
 
     for curr_file, out_dir_name in zip(ckpt_files, out_dir_names):
         ckpt = torch.load(str(ckpt_dir.joinpath(curr_file)))
