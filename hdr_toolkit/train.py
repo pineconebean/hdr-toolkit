@@ -12,7 +12,7 @@ from hdr_toolkit.metrics.psnr import psnr
 from hdr_toolkit.networks import get_model
 from hdr_toolkit.util.logging import get_logger
 
-
+s
 def _get_data_set(name, path, batch_size=4, two_level_dir=False, use_ea=False):
     if name == 'kalantari':
         return DataLoader(KalantariDataset(path, exposure_aligned=use_ea, hdr_domain=not use_ea),
